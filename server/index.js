@@ -70,11 +70,20 @@ function ensureDirectories() {
     });
 }
 
+// Handle uncaught errors
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Start server
 try {
     ensureDirectories();
     
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
         console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║                                                        ║
@@ -89,6 +98,10 @@ try {
 ║                                                        ║
 ╚════════════════════════════════════════════════════════╝
         `);
+    });
+    
+    server.on('error', (err) => {
+        console.error('Server error:', err);
     });
 } catch (error) {
     console.error('Failed to start server:', error);

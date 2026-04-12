@@ -3,28 +3,56 @@
  * Uses better-sqlite3 for synchronous, high-performance SQLite operations
  */
 
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
 const DB_PATH = path.join(__dirname, '..', 'db', 'zipp.db');
 const SCHEMA_PATH = path.join(__dirname, '..', 'db', 'schema.sql');
 
-// Ensure db directory exists
-const dbDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+let db = null;
+let dbError = null;
+
+/**
+ * Initialize database with error handling
+ */
+function initDatabase() {
+    if (db) return db;
+    if (dbError) throw dbError;
+    
+    try {
+        const Database = require('better-sqlite3');
+        
+        // Ensure db directory exists
+        const dbDir = path.dirname(DB_PATH);
+        if (!fs.existsSync(dbDir)) {
+            fs.mkdirSync(dbDir, { recursive: true });
+        }
+        
+        // Initialize database connection
+        db = new Database(DB_PATH);
+        
+        // Enable WAL mode for better performance
+        db.pragma('journal_mode = WAL');
+        
+        // Execute schema on startup
+        const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
+        db.exec(schema);
+        
+        console.log('Database initialized successfully at:', DB_PATH);
+        return db;
+    } catch (error) {
+        dbError = error;
+        console.error('Database initialization failed:', error.message);
+        throw error;
+    }
 }
 
-// Initialize database connection
-const db = new Database(DB_PATH);
-
-// Enable WAL mode for better performance
-db.pragma('journal_mode = WAL');
-
-// Execute schema on startup
-const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
-db.exec(schema);
+// Initialize on module load
+try {
+    initDatabase();
+} catch (error) {
+    console.error('Warning: Database not available, some features may not work');
+}
 
 /**
  * Generate a random hash for file identification
@@ -43,6 +71,8 @@ function generateHash(length = 10) {
  * Generate a unique hash that doesn't exist in the database
  */
 function generateUniqueHash() {
+    initDatabase(); // Ensure db is ready
+    
     let hash;
     let attempts = 0;
     const maxAttempts = 100;
@@ -83,9 +113,14 @@ function validateSlug(slug) {
     }
     
     // Check if slug already exists
-    const existing = db.prepare('SELECT 1 FROM files WHERE custom_hash = ?').get(slug);
-    if (existing) {
-        return { valid: false, error: 'This slug is already in use' };
+    try {
+        initDatabase(); // Ensure db is ready
+        const existing = db.prepare('SELECT 1 FROM files WHERE custom_hash = ?').get(slug);
+        if (existing) {
+            return { valid: false, error: 'This slug is already in use' };
+        }
+    } catch (error) {
+        // If db is not available, skip duplicate check
     }
     
     return { valid: true };
@@ -120,6 +155,8 @@ function calculateExpiry(expiryOption, customExpiry) {
  * Create a new file record in the database
  */
 function createFileRecord(data) {
+    initDatabase(); // Ensure db is ready
+    
     const {
         id,
         custom_hash,
@@ -160,6 +197,7 @@ function createFileRecord(data) {
  * Get file record by hash
  */
 function getFileByHash(hash) {
+    initDatabase(); // Ensure db is ready
     return db.prepare('SELECT * FROM files WHERE custom_hash = ?').get(hash);
 }
 
@@ -167,6 +205,7 @@ function getFileByHash(hash) {
  * Increment download count for a file
  */
 function incrementDownloadCount(id) {
+    initDatabase(); // Ensure db is ready
     const stmt = db.prepare('UPDATE files SET download_count = download_count + 1 WHERE id = ?');
     stmt.run(id);
 }
@@ -185,6 +224,7 @@ function isExpired(file) {
  * Delete a file record from the database
  */
 function deleteFileRecord(id) {
+    initDatabase(); // Ensure db is ready
     const stmt = db.prepare('DELETE FROM files WHERE id = ?');
     return stmt.run(id);
 }
@@ -193,6 +233,7 @@ function deleteFileRecord(id) {
  * Get all expired files
  */
 function getExpiredFiles() {
+    initDatabase(); // Ensure db is ready
     return db.prepare(`
         SELECT * FROM files 
         WHERE expires_at IS NOT NULL 
@@ -204,6 +245,7 @@ function getExpiredFiles() {
  * Get all files (for admin/cleanup purposes)
  */
 function getAllFiles() {
+    initDatabase(); // Ensure db is ready
     return db.prepare('SELECT * FROM files ORDER BY created_at DESC').all();
 }
 
@@ -246,7 +288,7 @@ function formatExpiry(expiresAt) {
 }
 
 module.exports = {
-    db,
+    initDatabase,
     generateUniqueHash,
     validateSlug,
     calculateExpiry,
