@@ -315,81 +315,73 @@ function generateNotFoundPage(hash) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Not Found - Zipp</title>
-    <link rel="stylesheet" href="/styles.css">
+    <title>Not Found - Zipp</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            padding: 20px;
         }
-        .error-container {
-            background: white;
-            border-radius: 18px;
-            padding: 60px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            max-width: 500px;
-            animation: fadeInUp 0.6s ease-out;
+        .container {
+            background: #141414;
+            border: 1px solid #262626;
+            padding: 48px;
+            max-width: 400px;
+            width: 100%;
         }
-        .error-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-        }
-        .error-title {
-            font-size: 32px;
-            color: #333;
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-        .error-message {
-            color: #666;
-            font-size: 16px;
-            margin-bottom: 30px;
-            line-height: 1.6;
-        }
-        .error-hash {
-            font-family: monospace;
-            background: #f3f4f6;
-            padding: 8px 16px;
-            border-radius: 8px;
-            color: #999;
+        .icon { font-size: 32px; margin-bottom: 16px; }
+        h1 {
             font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
         }
-        .btn-home {
+        p {
+            font-size: 13px;
+            color: #737373;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .hash {
+            font-family: ui-monospace, SFMono-Regular, monospace;
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #525252;
+            margin-bottom: 24px;
             display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 14px 32px;
-            border-radius: 12px;
+        }
+        a {
+            display: inline-block;
+            background: #e5e5e5;
+            color: #0a0a0a;
+            padding: 10px 20px;
+            font-size: 12px;
             text-decoration: none;
-            font-weight: 600;
-            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
         }
-        .btn-home:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        a:hover { background: #fff; }
     </style>
 </head>
 <body>
-    <div class="error-container">
-        <div class="error-icon">🔍</div>
-        <h1 class="error-title">File Not Found</h1>
-        <p class="error-message">
-            We couldn't find a file with the requested identifier.<br>
-            It may have been deleted or the link might be incorrect.
-        </p>
-        <p class="error-hash">${hash}</p>
-        <br><br>
-        <a href="/" class="btn-home">Upload a File</a>
+    <div class="container">
+        <div class="icon">/</div>
+        <h1>404 Not Found</h1>
+        <p>File not found. It may have been deleted or expired.</p>
+        <div class="hash">${hash}</div>
+        <br>
+        <a href="/">Upload File</a>
     </div>
 </body>
 </html>`;
@@ -404,89 +396,80 @@ function generateExpiredPage(file) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Expired - Zipp</title>
-    <link rel="stylesheet" href="/styles.css">
+    <title>Expired - Zipp</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            margin: 0;
-        }
-        .error-container {
-            background: white;
-            border-radius: 18px;
-            padding: 60px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            max-width: 500px;
-            animation: fadeInUp 0.6s ease-out;
-        }
-        .error-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-        }
-        .error-title {
-            font-size: 32px;
-            color: #333;
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-        .error-message {
-            color: #666;
-            font-size: 16px;
-            margin-bottom: 30px;
-            line-height: 1.6;
-        }
-        .file-info {
-            background: #f3f4f6;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
             padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 25px;
+        }
+        .container {
+            background: #141414;
+            border: 1px solid #262626;
+            padding: 48px;
+            max-width: 400px;
+            width: 100%;
+        }
+        .icon { font-size: 32px; margin-bottom: 16px; }
+        h1 {
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .file-box {
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            padding: 16px;
+            margin: 24px 0;
         }
         .file-name {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
+            font-size: 13px;
+            color: #fff;
+            margin-bottom: 4px;
         }
-        .file-expired {
-            color: #f5576c;
-            font-size: 14px;
+        .file-meta {
+            font-size: 12px;
+            color: #dc2626;
         }
-        .btn-home {
+        p {
+            font-size: 13px;
+            color: #737373;
+            line-height: 1.6;
+        }
+        a {
             display: inline-block;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 14px 32px;
-            border-radius: 12px;
+            background: #e5e5e5;
+            color: #0a0a0a;
+            padding: 10px 20px;
+            font-size: 12px;
             text-decoration: none;
-            font-weight: 600;
-            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
         }
-        .btn-home:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        a:hover { background: #fff; }
     </style>
 </head>
 <body>
-    <div class="error-container">
-        <div class="error-icon">⏰</div>
-        <h1 class="error-title">File Expired</h1>
-        <p class="error-message">
-            This file has passed its expiration date and is no longer available for download.
-        </p>
-        <div class="file-info">
+    <div class="container">
+        <div class="icon">!</div>
+        <h1>File Expired</h1>
+        <div class="file-box">
             <div class="file-name">${file.display_name}</div>
-            <div class="file-expired">Expired on ${new Date(file.expires_at).toLocaleString()}</div>
+            <div class="file-meta">Expired ${new Date(file.expires_at).toLocaleDateString()}</div>
         </div>
-        <a href="/" class="btn-home">Upload a File</a>
+        <p>This file is no longer available.</p>
+        <br>
+        <a href="/">Upload File</a>
     </div>
 </body>
 </html>`;
@@ -498,7 +481,7 @@ function generateExpiredPage(file) {
 function generateDownloadPage(file) {
     const sizeFormatted = formatFileSize(file.size_bytes);
     const expiryText = file.expires_at 
-        ? `Expires: ${new Date(file.expires_at).toLocaleString()}`
+        ? `Expires ${new Date(file.expires_at).toLocaleDateString()}`
         : 'Never expires';
     
     return `<!DOCTYPE html>
@@ -507,107 +490,94 @@ function generateDownloadPage(file) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${file.display_name} - Zipp</title>
-    <link rel="stylesheet" href="/styles.css">
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            padding: 20px;
         }
-        .download-container {
-            background: white;
-            border-radius: 18px;
-            padding: 50px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            max-width: 500px;
-            width: 90%;
-            animation: fadeInUp 0.6s ease-out;
+        .container {
+            background: #141414;
+            border: 1px solid #262626;
+            padding: 48px;
+            max-width: 420px;
+            width: 100%;
         }
-        .file-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-        }
+        .file-icon { font-size: 24px; margin-bottom: 24px; }
         .file-name {
-            font-size: 24px;
-            color: #333;
-            margin-bottom: 10px;
-            font-weight: 700;
+            font-size: 15px;
+            color: #fff;
+            margin-bottom: 4px;
             word-break: break-word;
+            font-weight: 500;
         }
         .file-meta {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 25px;
+            color: #737373;
+            font-size: 12px;
+            margin-bottom: 24px;
         }
         .file-description {
-            color: #555;
-            font-size: 15px;
-            margin-bottom: 25px;
+            color: #a3a3a3;
+            font-size: 13px;
+            margin-bottom: 24px;
             line-height: 1.5;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
+            padding: 16px;
+            background: #0a0a0a;
+            border: 1px solid #262626;
         }
         .download-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 16px 40px;
-            border-radius: 12px;
+            display: block;
+            background: #e5e5e5;
+            color: #0a0a0a;
+            padding: 12px 24px;
             text-decoration: none;
-            font-weight: 600;
-            font-size: 16px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+            text-align: center;
             border: none;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
         }
-        .download-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
-        }
-        .download-count {
-            margin-top: 20px;
-            color: #999;
-            font-size: 13px;
+        .download-btn:hover { background: #fff; }
+        .file-stats {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #262626;
+            font-size: 12px;
+            color: #525252;
         }
         .brand {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
+            margin-top: 24px;
+            font-size: 11px;
+            color: #404040;
         }
         .brand a {
-            color: #667eea;
+            color: #737373;
             text-decoration: none;
-            font-weight: 600;
         }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .brand a:hover { color: #a3a3a3; }
     </style>
 </head>
 <body>
-    <div class="download-container">
-        <div class="file-icon">📦</div>
-        <h1 class="file-name">${file.display_name}</h1>
-        <div class="file-meta">${sizeFormatted} • ${file.original_filename}</div>
+    <div class="container">
+        <div class="file-icon">◉</div>
+        <div class="file-name">${file.display_name}</div>
+        <div class="file-meta">${file.original_filename} · ${sizeFormatted}</div>
         ${file.description ? `<div class="file-description">${file.description}</div>` : ''}
-        <a href="/d/${file.custom_hash}?download=1" class="download-btn">
-            <span>⬇️</span>
-            <span>Download File</span>
-        </a>
-        <div class="download-count">
-            Downloaded ${file.download_count} time${file.download_count !== 1 ? 's' : ''} • ${expiryText}
+        <a href="/d/${file.custom_hash}?download=1" class="download-btn">Download</a>
+        <div class="file-stats">
+            ↓ ${file.download_count} · ${expiryText}
         </div>
         <div class="brand">
-            <a href="/">Zipp</a> — Simple file sharing
+            <a href="/">zipp</a>
         </div>
     </div>
 </body>
