@@ -91,38 +91,25 @@ console.log('Starting server initialization...');
 try {
     ensureDirectories();
     console.log('Directories ensured');
+    console.log('Opening server on port', PORT);
     
-    // Delay to ensure Railway detects startup
-    setTimeout(() => {
-        console.log('Opening server on port', PORT);
-        
-        const server = app.listen(PORT, '0.0.0.0', () => {
-            console.log('Server is now listening');
-            console.log(`PORT: ${PORT}`);
-            console.log(`ENV PORT: ${process.env.PORT || 'not set'}`);
-        });
-        
-        server.on('error', (err) => {
-            console.error('Server error:', err);
-        });
-        
-        server.on('listening', () => {
-            console.log(`
+    const server = app.listen(PORT, '0.0.0.0', () => {
+        console.log('Server is now listening on port', PORT);
+    });
+    
+    server.on('error', (err) => {
+        console.error('Server error:', err);
+    });
+    
+    console.log(`
 ╔════════════════════════════════════════════════════════╗
-║                                                        ║
 ║   🚀 Zipp File Hosting Service                        ║
-║                                                        ║
-║   Server running at: http://0.0.0.0:${PORT}          
-║   Environment PORT: ${process.env.PORT || 'not set'}    ║
-║                                                        ║
+║   Server running at: http://0.0.0.0:${PORT}          ║
 ║   • Upload endpoint: POST /api/upload                   ║
 ║   • Download page: GET /d/:hash                       ║
 ║   • Health check: GET /health                         ║
-║                                                        ║
 ╚════════════════════════════════════════════════════════╝
-            `);
-        });
-    }, 1000);
+    `);
 } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
