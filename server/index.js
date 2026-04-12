@@ -71,22 +71,28 @@ function ensureDirectories() {
 }
 
 // Start server
-ensureDirectories();
-
-app.listen(PORT, () => {
-    console.log(`
+try {
+    ensureDirectories();
+    
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║                                                        ║
 ║   🚀 Zipp File Hosting Service                        ║
 ║                                                        ║
-║   Server running at: http://localhost:${PORT}          
+║   Server running at: http://0.0.0.0:${PORT}          
+║   Environment PORT: ${process.env.PORT || 'not set'}    ║
 ║                                                        ║
 ║   • Upload endpoint: POST /api/upload                   ║
 ║   • Download page: GET /d/:hash                       ║
 ║   • Health check: GET /health                         ║
 ║                                                        ║
 ╚════════════════════════════════════════════════════════╝
-    `);
-});
+        `);
+    });
+} catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+}
 
 module.exports = app;
