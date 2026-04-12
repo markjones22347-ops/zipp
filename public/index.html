@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zipp - Simple File Sharing</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background"></div>
+    
+    <header class="header">
+        <div class="logo">
+            <span class="logo-icon">📦</span>
+            <span class="logo-text">Zipp</span>
+        </div>
+        <p class="tagline">Simple, no-signup file sharing</p>
+    </header>
+
+    <main class="main-container">
+        <!-- Upload Section -->
+        <section class="upload-section" id="uploadSection">
+            <div class="upload-card">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <p class="upload-text">Drop your file here, or <span class="browse">browse</span></p>
+                    <p class="upload-hint">Maximum file size: 100MB</p>
+                    <input type="file" id="fileInput" class="file-input">
+                </div>
+                
+                <div class="selected-file" id="selectedFile">
+                    <div class="file-preview">
+                        <span class="file-preview-icon">📄</span>
+                    </div>
+                    <div class="file-info">
+                        <p class="file-name" id="fileName"></p>
+                        <p class="file-size" id="fileSize"></p>
+                    </div>
+                    <button type="button" class="file-remove" id="removeFile" title="Remove file">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <form class="upload-form" id="uploadForm">
+                    <div class="form-group">
+                        <label for="displayName">Display Name *</label>
+                        <input type="text" id="displayName" name="displayName" 
+                               placeholder="Give your file a name" maxlength="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" 
+                                  placeholder="Add a description (optional)" maxlength="500" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expiryOption">Expires After</label>
+                            <select id="expiryOption" name="expiryOption">
+                                <option value="one_day">1 Day</option>
+                                <option value="one_week" selected>1 Week</option>
+                                <option value="one_month">1 Month</option>
+                                <option value="never">Never</option>
+                                <option value="custom">Custom Date...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group custom-expiry" id="customExpiryGroup">
+                            <label for="customExpiry">Custom Expiry Date</label>
+                            <input type="datetime-local" id="customExpiry" name="customExpiry">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customSlug">
+                            Custom Link (Optional)
+                            <span class="label-hint">Letters, numbers, dashes, underscores (3-50 chars)</span>
+                        </label>
+                        <div class="slug-input">
+                            <span class="slug-prefix">/d/</span>
+                            <input type="text" id="customSlug" name="customSlug" 
+                                   placeholder="auto-generated" maxlength="50"
+                                   pattern="[a-zA-Z0-9_-]+">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="upload-btn" id="uploadBtn">
+                        <span class="btn-text">Upload File</span>
+                        <span class="btn-loader">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="60">
+                                    <animate attributeName="stroke-dashoffset" dur="1s" repeatCount="indefinite" values="60;0"/>
+                                </circle>
+                            </svg>
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Success Section -->
+        <section class="success-section hidden" id="successSection">
+            <div class="success-card">
+                <div class="success-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+                <h2 class="success-title">Upload Complete!</h2>
+                <p class="success-message">Your file is ready to share.</p>
+
+                <div class="link-box">
+                    <input type="text" id="shareLink" class="share-link" readonly>
+                    <button type="button" class="copy-btn" id="copyBtn">
+                        <span class="copy-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </span>
+                        <span class="copy-text">Copy</span>
+                    </button>
+                </div>
+
+                <div class="file-summary" id="fileSummary"></div>
+
+                <button type="button" class="new-upload-btn" id="newUploadBtn">
+                    Upload Another File
+                </button>
+            </div>
+        </section>
+
+        <!-- Recent Uploads Section -->
+        <section class="recent-section" id="recentSection">
+            <h2 class="recent-title">
+                <span>📋</span>
+                Recent Uploads
+            </h2>
+            <div class="recent-list" id="recentList">
+                <p class="recent-empty">No uploads yet. Upload a file to see it here!</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Made with ❤️ • Files expire automatically • No signup required</p>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span class="toast-icon" id="toastIcon">✓</span>
+        <span class="toast-message" id="toastMessage">Copied!</span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

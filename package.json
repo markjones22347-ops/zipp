@@ -1,0 +1,24 @@
+{
+  "name": "zipp-file-hosting",
+  "version": "1.0.0",
+  "description": "Zipp - A no-signup file hosting service with clean UI",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "cleanup": "node server/cleanup.js"
+  },
+  "keywords": [
+    "file-hosting",
+    "upload",
+    "sharing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "express": "^4.18.3",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^9.0.1"
+  }
+}
