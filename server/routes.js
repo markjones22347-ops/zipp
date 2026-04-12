@@ -271,9 +271,9 @@ router.get('/d/:hash', (req, res) => {
     // Increment download count
     incrementDownloadCount(file.id);
     
-    // Set appropriate headers
+    // Set appropriate headers - force download as attachment
     res.setHeader('Content-Type', file.mime_type);
-    res.setHeader('Content-Disposition', `inline; filename="${file.original_filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.original_filename}"`);
     res.setHeader('Content-Length', file.size_bytes);
     res.setHeader('Cache-Control', 'public, max-age=3600');
     
