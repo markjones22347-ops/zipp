@@ -299,8 +299,8 @@ function showSuccess(result) {
     uploadSection.classList.add('hidden');
     successSection.classList.remove('hidden');
     
-    // Auto-copy direct download link
-    copyToClipboard(fullUrl + '?download=1');
+    // Auto-copy info page URL
+    copyToClipboard(fullUrl + '/info');
     copyBtn.classList.add('copied');
     copyBtn.querySelector('.copy-text').textContent = 'Copied!';
 }
@@ -365,6 +365,7 @@ function renderUploads() {
         const expiryClass = isExpired ? 'expired' : (file.expires_at ? '' : 'never');
         const expiryText = formatExpiry(file.expires_at);
         const savedDate = new Date(file.savedAt).toLocaleDateString();
+        const infoUrl = file.fullUrl + '/info';
         const downloadUrl = file.fullUrl + '?download=1';
         
         return `
@@ -380,17 +381,17 @@ function renderUploads() {
                     </div>
                 </div>
                 <div class="recent-actions">
-                    <button class="recent-btn" onclick="copyLink('${downloadUrl}', this)" title="Copy download link">
+                    <button class="recent-btn" onclick="copyLink('${infoUrl}', this)" title="Copy link">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
                     </button>
-                    <a href="${downloadUrl}" class="recent-btn" title="Download file" target="_blank">
+                    <a href="${infoUrl}" class="recent-btn" title="View file page" target="_blank">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
                         </svg>
                     </a>
                     <button class="recent-btn" onclick="deleteUpload('${file.custom_hash}')" title="Remove from list">

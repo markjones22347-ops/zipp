@@ -289,11 +289,21 @@ router.get('/d/:hash', (req, res) => {
 
 /**
  * GET /d/:hash/info
- * Redirect to direct download (info pages removed)
+ * Get download page (HTML) for a file
  */
 router.get('/d/:hash/info', (req, res) => {
     const { hash } = req.params;
-    res.redirect(301, `/d/${hash}?download=1`);
+    const file = getFileByHash(hash);
+    
+    if (!file) {
+        return res.status(404).send(generateNotFoundPage(hash));
+    }
+    
+    if (isExpired(file)) {
+        return res.status(410).send(generateExpiredPage(file));
+    }
+    
+    res.send(generateDownloadPage(file));
 });
 
 /**
