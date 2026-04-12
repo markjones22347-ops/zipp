@@ -103,6 +103,28 @@ body {
 .upload-btn.loading .btn-text { opacity: 0; }
 .upload-btn.loading .btn-loader { display: block; position: absolute; }
 
+/* Progress Bar */
+.progress-container { margin-top: 12px; }
+.progress-container.hidden { display: none; }
+.progress-bar {
+    height: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    background: var(--text);
+    width: 0%;
+    transition: width 0.1s ease;
+}
+.progress-text {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 8px;
+}
+
 /* Success */
 .success-section.hidden { display: none; }
 .success-card { background: var(--bg-card); border: 1px solid var(--border); padding: 32px 24px; text-align: center; }

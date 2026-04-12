@@ -240,22 +240,54 @@ async function handleUpload(e) {
     }
     
     try {
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-        });
+        // Show progress bar
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        progressContainer.classList.remove('hidden');
         
-        const result = await response.json();
+        // Use XMLHttpRequest for progress tracking
+        const result = await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            // Track upload progress
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressFill.style.width = percent + '%';
+                    progressText.textContent = percent + '%';
+                }
+            });
+            
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(JSON.parse(xhr.responseText));
+                } else {
+                    reject(new Error('Upload failed'));
+                }
+            });
+            
+            xhr.addEventListener('error', () => reject(new Error('Network error')));
+            xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
+            
+            xhr.open('POST', '/api/upload');
+            xhr.send(formData);
+        });
         
         if (!result.success) {
             throw new Error(result.error || 'Upload failed');
         }
+        
+        // Hide progress bar
+        progressContainer.classList.add('hidden');
         
         // Save to localStorage and show success
         saveUpload(result.file);
         showSuccess(result);
         
     } catch (error) {
+        // Hide progress bar on error
+        document.getElementById('progressContainer').classList.add('hidden');
         showToast(error.message, 'x', 5000);
         console.error('Upload error:', error);
     } finally {
