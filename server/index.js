@@ -29,13 +29,19 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-// Health check endpoint
+// Health check endpoint - CRITICAL for Railway
 app.get('/health', (req, res) => {
+    console.log('Health check received');
     res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
     });
+});
+
+// Simple ping endpoint for Railway
+app.get('/ping', (req, res) => {
+    res.send('pong');
 });
 
 // 404 handler
@@ -80,11 +86,28 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start server
+console.log('Starting server initialization...');
+
 try {
     ensureDirectories();
+    console.log('Directories ensured');
     
-    const server = app.listen(PORT, '0.0.0.0', () => {
-        console.log(`
+    // Delay to ensure Railway detects startup
+    setTimeout(() => {
+        console.log('Opening server on port', PORT);
+        
+        const server = app.listen(PORT, '0.0.0.0', () => {
+            console.log('Server is now listening');
+            console.log(`PORT: ${PORT}`);
+            console.log(`ENV PORT: ${process.env.PORT || 'not set'}`);
+        });
+        
+        server.on('error', (err) => {
+            console.error('Server error:', err);
+        });
+        
+        server.on('listening', () => {
+            console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║                                                        ║
 ║   🚀 Zipp File Hosting Service                        ║
@@ -97,12 +120,9 @@ try {
 ║   • Health check: GET /health                         ║
 ║                                                        ║
 ╚════════════════════════════════════════════════════════╝
-        `);
-    });
-    
-    server.on('error', (err) => {
-        console.error('Server error:', err);
-    });
+            `);
+        });
+    }, 1000);
 } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
