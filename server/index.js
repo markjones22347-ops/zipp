@@ -18,20 +18,14 @@ app.use(express.urlencoded({ extended: true }));
 // Static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// API routes
-app.use('/api', routes);
-
-// Download routes (mounted at root)
-app.use('/', routes);
-
-// Root route - serve the main application
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+// Test endpoint - no dependencies
+app.get('/test', (req, res) => {
+    res.json({ test: 'ok', time: Date.now() });
 });
 
 // Health check endpoint - CRITICAL for Railway
 app.get('/health', (req, res) => {
-    console.log('Health check received');
+    console.log('Health check received at', new Date().toISOString());
     res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -43,6 +37,20 @@ app.get('/health', (req, res) => {
 app.get('/ping', (req, res) => {
     res.send('pong');
 });
+
+// Root route - serve the main application (before API routes)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+
+// API routes - wrapped in error handler
+try {
+    app.use('/api', routes);
+    app.use('/', routes);
+    console.log('Routes loaded successfully');
+} catch (err) {
+    console.error('Failed to load routes:', err);
+}
 
 // 404 handler
 app.use((req, res) => {
