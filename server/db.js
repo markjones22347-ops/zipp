@@ -152,6 +152,23 @@ function calculateExpiry(expiryOption, customExpiry) {
 }
 
 /**
+ * Hash password using bcrypt
+ */
+function hashPassword(password) {
+    const crypto = require('crypto');
+    return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+/**
+ * Verify password against hash
+ */
+function verifyPassword(password, hash) {
+    const crypto = require('crypto');
+    const hashed = crypto.createHash('sha256').update(password).digest('hex');
+    return hashed === hash;
+}
+
+/**
  * Create a new file record in the database
  */
 function createFileRecord(data) {
@@ -167,14 +184,15 @@ function createFileRecord(data) {
         size_bytes,
         storage_path,
         created_at,
-        expires_at
+        expires_at,
+        password_hash
     } = data;
     
     const stmt = db.prepare(`
         INSERT INTO files (
             id, custom_hash, display_name, description, original_filename,
-            mime_type, size_bytes, storage_path, created_at, expires_at, download_count
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+            mime_type, size_bytes, storage_path, created_at, expires_at, download_count, password_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
     `);
     
     stmt.run(
@@ -187,7 +205,8 @@ function createFileRecord(data) {
         size_bytes,
         storage_path,
         created_at,
-        expires_at
+        expires_at,
+        password_hash || null
     );
     
     return getFileByHash(custom_hash);
@@ -300,5 +319,7 @@ module.exports = {
     getExpiredFiles,
     getAllFiles,
     formatFileSize,
-    formatExpiry
+    formatExpiry,
+    hashPassword,
+    verifyPassword
 };

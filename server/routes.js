@@ -18,7 +18,12 @@ const {
     getFileByHash,
     incrementDownloadCount,
     isExpired,
-    formatFileSize
+    deleteFileRecord,
+    getExpiredFiles,
+    formatFileSize,
+    formatExpiry,
+    hashPassword,
+    verifyPassword
 } = require('./db');
 
 // Ensure uploads directory exists
@@ -114,7 +119,7 @@ router.post('/upload', (req, res, next) => {
             });
         }
         
-        const { display_name, description, expiry_option, custom_expiry, custom_slug } = req.body;
+        const { display_name, description, expiry_option, custom_expiry, custom_slug, password } = req.body;
         
         // Validate required fields
         if (!display_name || display_name.trim().length === 0) {
@@ -126,6 +131,12 @@ router.post('/upload', (req, res, next) => {
                 success: false,
                 error: 'Display name is required'
             });
+        }
+        
+        // Hash password if provided
+        let password_hash = null;
+        if (password && password.trim().length > 0) {
+            password_hash = hashPassword(password.trim());
         }
         
         // Determine the hash to use
@@ -161,7 +172,8 @@ router.post('/upload', (req, res, next) => {
             size_bytes: req.file.size,
             storage_path: req.uploadPath,
             created_at: new Date().toISOString(),
-            expires_at: expiresAt
+            expires_at: expiresAt,
+            password_hash: password_hash
         };
         
         const record = createFileRecord(fileData);
@@ -256,6 +268,14 @@ router.get('/d/:hash', (req, res) => {
     // File expired
     if (isExpired(file)) {
         return res.status(410).send(generateExpiredPage(file));
+    }
+    
+    // Check password if required
+    const providedPassword = req.query.password || req.body?.password;
+    if (file.password_hash) {
+        if (!providedPassword || !verifyPassword(providedPassword, file.password_hash)) {
+            return res.status(401).send(generatePasswordPage(hash, file.display_name));
+        }
     }
     
     // Get the actual file from storage directory

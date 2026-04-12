@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS files (
     storage_path TEXT NOT NULL,
     created_at TEXT NOT NULL,
     expires_at TEXT NULL,
-    download_count INTEGER NOT NULL DEFAULT 0
+    download_count INTEGER NOT NULL DEFAULT 0,
+    password_hash TEXT NULL
 );
 
 -- Index for faster hash lookups

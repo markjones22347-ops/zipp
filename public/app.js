@@ -234,6 +234,11 @@ async function handleUpload(e) {
         formData.append('custom_slug', customSlug);
     }
     
+    const password = document.getElementById('password').value.trim();
+    if (password) {
+        formData.append('password', password);
+    }
+    
     try {
         const response = await fetch('/api/upload', {
             method: 'POST',
