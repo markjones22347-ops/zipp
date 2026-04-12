@@ -48,6 +48,16 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
+// API and download routes
+try {
+    const routes = require('./routes');
+    app.use('/api', routes);
+    app.use('/', routes);
+    console.log('Routes loaded');
+} catch (err) {
+    console.error('Routes failed:', err.message);
+}
+
 // 404
 app.use((req, res) => {
     res.status(404).send('Not found');
