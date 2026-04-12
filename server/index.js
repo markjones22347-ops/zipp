@@ -30,14 +30,15 @@ app.get('/test', (req, res) => {
     res.json({ ok: true, time: Date.now() });
 });
 
-// Health check - CRITICAL
+// Health check endpoint - CRITICAL for Railway
 app.get('/health', (req, res) => {
-    console.log('Health check at', new Date().toISOString());
-    res.status(200).send('OK');
+    console.log('Health check - sending 200 OK');
+    res.status(200).json({ status: 'ok' });
 });
 
+// Simple ping endpoint for Railway
 app.get('/ping', (req, res) => {
-    res.send('pong');
+    res.status(200).send('pong');
 });
 
 // Static files
