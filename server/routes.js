@@ -601,4 +601,341 @@ function generateDownloadPage(file) {
 </html>`;
 }
 
+// Admin token - hardcoded as requested
+const ADMIN_TOKEN = 'tDhWn1TUA0E4DCgk0RbPQw';
+
+/**
+ * Admin authentication middleware
+ */
+function requireAdmin(req, res, next) {
+    const token = req.query.token || req.headers['x-admin-token'];
+    if (token !== ADMIN_TOKEN) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    next();
+}
+
+/**
+ * GET /admin
+ * Admin dashboard HTML page
+ */
+router.get('/admin', requireAdmin, (req, res) => {
+    res.send(generateAdminPage());
+});
+
+/**
+ * GET /api/admin/files
+ * Get all files for admin
+ */
+router.get('/api/admin/files', requireAdmin, (req, res) => {
+    try {
+        const files = getAllFiles();
+        res.json({ success: true, files });
+    } catch (error) {
+        console.error('Admin files error:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch files' });
+    }
+});
+
+/**
+ * DELETE /api/admin/files/:hash
+ * Delete a file as admin
+ */
+router.delete('/api/admin/files/:hash', requireAdmin, (req, res) => {
+    try {
+        const { hash } = req.params;
+        const file = getFileByHash(hash);
+        
+        if (!file) {
+            return res.status(404).json({ success: false, error: 'File not found' });
+        }
+        
+        deleteFileRecord(hash);
+        res.json({ success: true, message: 'File deleted' });
+    } catch (error) {
+        console.error('Admin delete error:', error);
+        res.status(500).json({ success: false, error: 'Failed to delete file' });
+    }
+});
+
+/**
+ * POST /api/admin/cleanup
+ * Bulk delete expired files
+ */
+router.post('/api/admin/cleanup', requireAdmin, (req, res) => {
+    try {
+        const expiredFiles = getExpiredFiles();
+        let deletedCount = 0;
+        
+        for (const file of expiredFiles) {
+            try {
+                deleteFileRecord(file.custom_hash);
+                deletedCount++;
+            } catch (err) {
+                console.error(`Failed to delete expired file ${file.custom_hash}:`, err);
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `Deleted ${deletedCount} expired files`,
+            deletedCount
+        });
+    } catch (error) {
+        console.error('Admin cleanup error:', error);
+        res.status(500).json({ success: false, error: 'Failed to cleanup files' });
+    }
+});
+
+/**
+ * Generate HTML for admin dashboard
+ */
+function generateAdminPage() {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - zipp</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            color: #e5e5e5;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .subtitle {
+            color: #737373;
+            font-size: 12px;
+            margin-bottom: 32px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: #141414;
+            border: 1px solid #262626;
+            padding: 20px;
+        }
+        .stat-value {
+            font-size: 28px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #737373;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .actions {
+            margin-bottom: 24px;
+        }
+        .btn {
+            background: #262626;
+            border: 1px solid #404040;
+            color: #e5e5e5;
+            padding: 10px 20px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            margin-right: 8px;
+            text-transform: uppercase;
+        }
+        .btn:hover { background: #404040; }
+        .btn.danger { background: #dc2626; border-color: #dc2626; }
+        .btn.danger:hover { background: #ef4444; }
+        .files-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #141414;
+            border: 1px solid #262626;
+        }
+        .files-table th {
+            text-align: left;
+            padding: 12px;
+            font-size: 11px;
+            color: #737373;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #262626;
+        }
+        .files-table td {
+            padding: 12px;
+            font-size: 12px;
+            border-bottom: 1px solid #262626;
+        }
+        .files-table tr:hover { background: #1a1a1a; }
+        .expired { color: #dc2626; }
+        .protected { color: #f59e0b; }
+        .delete-btn {
+            background: #dc2626;
+            border: none;
+            color: white;
+            padding: 4px 12px;
+            font-size: 11px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .delete-btn:hover { background: #ef4444; }
+        .file-link { color: #e5e5e5; text-decoration: none; }
+        .file-link:hover { color: #fff; text-decoration: underline; }
+        .loading { color: #737373; }
+        .empty { padding: 40px; text-align: center; color: #737373; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+        <p class="subtitle">zipp file hosting management</p>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalFiles">-</div>
+                <div class="stat-label">Total Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalSize">-</div>
+                <div class="stat-label">Total Size</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="expiredFiles">-</div>
+                <div class="stat-label">Expired Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="passwordProtected">-</div>
+                <div class="stat-label">Password Protected</div>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button class="btn" onclick="refreshFiles()">Refresh</button>
+            <button class="btn danger" onclick="cleanupExpired()">Delete Expired Files</button>
+        </div>
+        
+        <div id="filesContainer">
+            <div class="loading">Loading files...</div>
+        </div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        async function fetchFiles() {
+            const res = await fetch('/api/admin/files?token=' + token);
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            return data.files;
+        }
+        
+        async function refreshFiles() {
+            document.getElementById('filesContainer').innerHTML = '<div class="loading">Loading files...</div>';
+            try {
+                const files = await fetchFiles();
+                renderFiles(files);
+                updateStats(files);
+            } catch (err) {
+                document.getElementById('filesContainer').innerHTML = '<div class="empty">Error: ' + err.message + '</div>';
+            }
+        }
+        
+        function updateStats(files) {
+            const total = files.length;
+            const totalBytes = files.reduce((sum, f) => sum + f.size_bytes, 0);
+            const expired = files.filter(f => f.expires_at && new Date(f.expires_at) < new Date()).length;
+            const protected = files.filter(f => f.password_hash).length;
+            
+            document.getElementById('totalFiles').textContent = total;
+            document.getElementById('totalSize').textContent = formatBytes(totalBytes);
+            document.getElementById('expiredFiles').textContent = expired;
+            document.getElementById('passwordProtected').textContent = protected;
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+        
+        function renderFiles(files) {
+            if (files.length === 0) {
+                document.getElementById('filesContainer').innerHTML = '<div class="empty">No files yet.</div>';
+                return;
+            }
+            
+            const html = '<table class="files-table"><thead><tr><th>Name</th><th>Hash</th><th>Size</th><th>Created</th><th>Expires</th><th>Downloads</th><th>Protected</th><th>Action</th></tr></thead><tbody>' +
+                files.map(f => {
+                    const isExpired = f.expires_at && new Date(f.expires_at) < new Date();
+                    return '<tr>' +
+                        '<td><a class="file-link" href="/d/' + f.custom_hash + '/info?token=' + token + '" target="_blank">' + escapeHtml(f.display_name) + '</a></td>' +
+                        '<td>' + f.custom_hash + '</td>' +
+                        '<td>' + formatBytes(f.size_bytes) + '</td>' +
+                        '<td>' + new Date(f.created_at).toLocaleDateString() + '</td>' +
+                        '<td class="' + (isExpired ? 'expired' : '') + '">' + (f.expires_at ? new Date(f.expires_at).toLocaleDateString() : 'Never') + '</td>' +
+                        '<td>' + f.download_count + '</td>' +
+                        '<td class="' + (f.password_hash ? 'protected' : '') + '">' + (f.password_hash ? 'Yes' : 'No') + '</td>' +
+                        '<td><button class="delete-btn" onclick="deleteFile(\'' + f.custom_hash + '\')">Delete</button></td>' +
+                    '</tr>';
+                }).join('') +
+                '</tbody></table>';
+            
+            document.getElementById('filesContainer').innerHTML = html;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function deleteFile(hash) {
+            if (!confirm('Delete this file?')) return;
+            try {
+                const res = await fetch('/api/admin/files/' + hash + '?token=' + token, { method: 'DELETE' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                refreshFiles();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+        
+        async function cleanupExpired() {
+            if (!confirm('Delete ALL expired files? This cannot be undone.')) return;
+            try {
+                const res = await fetch('/api/admin/cleanup?token=' + token, { method: 'POST' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                alert('Deleted ' + data.deletedCount + ' expired files');
+                refreshFiles();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+        
+        // Load on page load
+        refreshFiles();
+    </script>
+</body>
+</html>`;
+}
+
 module.exports = router;
