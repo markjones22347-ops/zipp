@@ -251,7 +251,7 @@ async function handleUpload(e) {
         showSuccess(result);
         
     } catch (error) {
-        showToast(error.message, '✗', 5000);
+        showToast(error.message, 'x', 5000);
         console.error('Upload error:', error);
     } finally {
         uploadBtn.disabled = false;
@@ -299,8 +299,8 @@ function showSuccess(result) {
     uploadSection.classList.add('hidden');
     successSection.classList.remove('hidden');
     
-    // Auto-copy link
-    copyToClipboard(fullUrl + '/info');
+    // Auto-copy direct download link
+    copyToClipboard(fullUrl + '?download=1');
     copyBtn.classList.add('copied');
     copyBtn.querySelector('.copy-text').textContent = 'Copied!';
 }
@@ -365,31 +365,32 @@ function renderUploads() {
         const expiryClass = isExpired ? 'expired' : (file.expires_at ? '' : 'never');
         const expiryText = formatExpiry(file.expires_at);
         const savedDate = new Date(file.savedAt).toLocaleDateString();
+        const downloadUrl = file.fullUrl + '?download=1';
         
         return `
             <div class="recent-item">
-                <div class="recent-icon">📦</div>
+                <div class="recent-icon">#</div>
                 <div class="recent-info">
                     <div class="recent-name">${escapeHtml(file.display_name)}</div>
                     <div class="recent-meta">
                         <span>${file.size_formatted}</span>
                         <span class="recent-expiry ${expiryClass}">${expiryText}</span>
-                        <span>↓ ${file.download_count || 0}</span>
-                        <span title="Saved on ${savedDate}">📅</span>
+                        <span>dl: ${file.download_count || 0}</span>
+                        <span title="Saved ${savedDate}">[${savedDate}]</span>
                     </div>
                 </div>
                 <div class="recent-actions">
-                    <button class="recent-btn" onclick="copyLink('${file.fullUrl}/info', this)" title="Copy link">
+                    <button class="recent-btn" onclick="copyLink('${downloadUrl}', this)" title="Copy download link">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
                     </button>
-                    <a href="${file.fullUrl}/info" class="recent-btn" title="View file page" target="_blank">
+                    <a href="${downloadUrl}" class="recent-btn" title="Download file" target="_blank">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                            <polyline points="15 3 21 3 21 9"></polyline>
-                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
                     </a>
                     <button class="recent-btn" onclick="deleteUpload('${file.custom_hash}')" title="Remove from list">
