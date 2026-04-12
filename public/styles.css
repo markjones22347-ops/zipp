@@ -523,6 +523,123 @@ body {
     color: var(--text-primary);
 }
 
+/* Recent Uploads Section */
+.recent-section {
+    margin-top: 32px;
+}
+
+.recent-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.recent-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 24px;
+    font-size: 14px;
+}
+
+.recent-item {
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--border);
+    transition: all var(--transition);
+}
+
+.recent-item:hover {
+    border-color: var(--border-focus);
+}
+
+.recent-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--primary);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.recent-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.recent-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.recent-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.recent-expiry {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.recent-expiry.expired {
+    color: var(--error);
+}
+
+.recent-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.recent-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+}
+
+.recent-btn:hover {
+    background: var(--bg-input);
+    color: var(--text-primary);
+}
+
+.recent-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
 /* Footer */
 .footer {
     text-align: center;

@@ -2,6 +2,9 @@
  * Zipp File Hosting - Frontend Application
  */
 
+// Local storage key for saved uploads
+const STORAGE_KEY = 'zipp_uploads';
+
 // DOM Elements
 const uploadSection = document.getElementById('uploadSection');
 const uploadArea = document.getElementById('uploadArea');
@@ -22,6 +25,7 @@ const copyBtn = document.getElementById('copyBtn');
 const fileSummary = document.getElementById('fileSummary');
 const newUploadBtn = document.getElementById('newUploadBtn');
 
+const recentList = document.getElementById('recentList');
 const toast = document.getElementById('toast');
 const toastIcon = document.getElementById('toastIcon');
 const toastMessage = document.getElementById('toastMessage');
@@ -242,7 +246,8 @@ async function handleUpload(e) {
             throw new Error(result.error || 'Upload failed');
         }
         
-        // Show success section
+        // Save to localStorage and show success
+        saveUpload(result.file);
         showSuccess(result);
         
     } catch (error) {
@@ -295,9 +300,123 @@ function showSuccess(result) {
     successSection.classList.remove('hidden');
     
     // Auto-copy link
-    copyToClipboard(fullUrl);
+    copyToClipboard(fullUrl + '/info');
     copyBtn.classList.add('copied');
     copyBtn.querySelector('.copy-text').textContent = 'Copied!';
+}
+
+/**
+ * Save upload to localStorage
+ */
+function saveUpload(file) {
+    const uploads = getUploads();
+    const newUpload = {
+        ...file,
+        fullUrl: window.location.origin + `/d/${file.custom_hash}`,
+        savedAt: new Date().toISOString()
+    };
+    uploads.unshift(newUpload);
+    if (uploads.length > 20) uploads.pop();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(uploads));
+    renderUploads();
+}
+
+/**
+ * Get uploads from localStorage
+ */
+function getUploads() {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Clear all saved uploads
+ */
+function clearUploads() {
+    localStorage.removeItem(STORAGE_KEY);
+    renderUploads();
+}
+
+/**
+ * Delete a specific upload from storage
+ */
+function deleteUpload(hash) {
+    const uploads = getUploads().filter(u => u.custom_hash !== hash);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(uploads));
+    renderUploads();
+}
+
+/**
+ * Render uploads list
+ */
+function renderUploads() {
+    const uploads = getUploads();
+    if (uploads.length === 0) {
+        recentList.innerHTML = '<p class="recent-empty">No uploads yet. Upload a file to see it here!</p>';
+        return;
+    }
+    
+    recentList.innerHTML = uploads.map(file => {
+        const isExpired = file.expires_at && new Date(file.expires_at) < new Date();
+        const expiryClass = isExpired ? 'expired' : (file.expires_at ? '' : 'never');
+        const expiryText = formatExpiry(file.expires_at);
+        const savedDate = new Date(file.savedAt).toLocaleDateString();
+        
+        return `
+            <div class="recent-item">
+                <div class="recent-icon">📦</div>
+                <div class="recent-info">
+                    <div class="recent-name">${escapeHtml(file.display_name)}</div>
+                    <div class="recent-meta">
+                        <span>${file.size_formatted}</span>
+                        <span class="recent-expiry ${expiryClass}">${expiryText}</span>
+                        <span>↓ ${file.download_count || 0}</span>
+                        <span title="Saved on ${savedDate}">📅</span>
+                    </div>
+                </div>
+                <div class="recent-actions">
+                    <button class="recent-btn" onclick="copyLink('${file.fullUrl}/info', this)" title="Copy link">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                    <a href="${file.fullUrl}/info" class="recent-btn" title="View file page" target="_blank">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                    </a>
+                    <button class="recent-btn" onclick="deleteUpload('${file.custom_hash}')" title="Remove from list">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Copy link handler
+ */
+function copyLink(url, btn) {
+    copyToClipboard(url).then(() => {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        btn.style.color = 'var(--success)';
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.style.color = '';
+        }, 2000);
+    });
 }
 
 /**
@@ -364,8 +483,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup drag and drop
     setupDragAndDrop();
     
+    // Render saved uploads
+    renderUploads();
+    
     // Set initial custom expiry min
     const now = new Date();
     now.setMinutes(now.getMinutes() + 1);
     customExpiry.min = now.toISOString().slice(0, 16);
 });
+
+// Expose functions for inline handlers
+window.copyLink = copyLink;
+window.deleteUpload = deleteUpload;
