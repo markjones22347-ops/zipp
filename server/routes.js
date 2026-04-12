@@ -601,6 +601,14 @@ function generateDownloadPage(file) {
 </html>`;
 }
 
+// API Keys for developers (in production, store hashed in DB)
+const API_KEYS = new Set([
+    'dev_' + ADMIN_TOKEN // Developer API key
+]);
+
+// Webhook URLs (configure these)
+let webhookUrls = [];
+
 // Admin token - hardcoded as requested
 const ADMIN_TOKEN = 'tDhWn1TUA0E4DCgk0RbPQw';
 
@@ -686,6 +694,209 @@ router.post('/api/admin/cleanup', requireAdmin, (req, res) => {
         res.status(500).json({ success: false, error: 'Failed to cleanup files' });
     }
 });
+
+/**
+ * API Key authentication middleware
+ */
+function requireApiKey(req, res, next) {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey || !API_KEYS.has(apiKey)) {
+        return res.status(401).json({ success: false, error: 'Invalid API key' });
+    }
+    next();
+}
+
+/**
+ * POST /api/v1/upload
+ * Developer API endpoint for programmatic uploads
+ */
+router.post('/api/v1/upload', requireApiKey, upload.single('file'), handleMulterErrors, async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                error: 'No file provided'
+            });
+        }
+        
+        const { display_name, description, expiry_hours, custom_slug, password } = req.body;
+        
+        if (!display_name || display_name.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Display name is required'
+            });
+        }
+        
+        // Hash password if provided
+        let password_hash = null;
+        if (password && password.trim().length > 0) {
+            password_hash = hashPassword(password.trim());
+        }
+        
+        // Determine hash
+        let hash;
+        if (custom_slug && custom_slug.trim().length > 0) {
+            const validation = validateSlug(custom_slug.trim());
+            if (!validation.valid) {
+                return res.status(400).json({ success: false, error: validation.message });
+            }
+            hash = custom_slug.trim();
+        } else {
+            hash = generateUniqueHash();
+        }
+        
+        // Calculate expiry
+        let expiresAt = null;
+        if (expiry_hours && parseInt(expiry_hours) > 0) {
+            const date = new Date();
+            date.setHours(date.getHours() + parseInt(expiry_hours));
+            expiresAt = date.toISOString();
+        }
+        
+        // Create file record
+        const fileData = {
+            id: uuidv4(),
+            custom_hash: hash,
+            display_name: display_name.trim(),
+            description: description ? description.trim() : null,
+            original_filename: req.file.originalname,
+            mime_type: req.file.mimetype,
+            size_bytes: req.file.size,
+            storage_path: req.uploadPath,
+            created_at: new Date().toISOString(),
+            expires_at: expiresAt,
+            password_hash: password_hash
+        };
+        
+        const file = createFileRecord(fileData);
+        
+        // Send webhook
+        await sendWebhook('file.uploaded', {
+            hash: file.custom_hash,
+            display_name: file.display_name,
+            size_bytes: file.size_bytes
+        });
+        
+        res.json({
+            success: true,
+            file: {
+                id: file.id,
+                custom_hash: file.custom_hash,
+                display_name: file.display_name,
+                description: file.description,
+                original_filename: file.original_filename,
+                mime_type: file.mime_type,
+                size_bytes: file.size_bytes,
+                size_formatted: formatFileSize(file.size_bytes),
+                created_at: file.created_at,
+                expires_at: file.expires_at,
+                url: `/d/${file.custom_hash}`,
+                info_url: `/d/${file.custom_hash}/info`,
+                download_url: `/d/${file.custom_hash}?download=1`,
+                password_protected: !!file.password_hash
+            }
+        });
+    } catch (error) {
+        console.error('API upload error:', error);
+        res.status(500).json({ success: false, error: 'Upload failed' });
+    }
+});
+
+/**
+ * GET /api/v1/files/:hash
+ * Developer API - Get file metadata
+ */
+router.get('/api/v1/files/:hash', requireApiKey, (req, res) => {
+    try {
+        const { hash } = req.params;
+        const file = getFileByHash(hash);
+        
+        if (!file) {
+            return res.status(404).json({ success: false, error: 'File not found' });
+        }
+        
+        res.json({
+            success: true,
+            file: {
+                id: file.id,
+                custom_hash: file.custom_hash,
+                display_name: file.display_name,
+                description: file.description,
+                original_filename: file.original_filename,
+                mime_type: file.mime_type,
+                size_bytes: file.size_bytes,
+                size_formatted: formatFileSize(file.size_bytes),
+                created_at: file.created_at,
+                expires_at: file.expires_at,
+                download_count: file.download_count,
+                is_expired: isExpired(file),
+                password_protected: !!file.password_hash
+            }
+        });
+    } catch (error) {
+        console.error('API file fetch error:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch file' });
+    }
+});
+
+/**
+ * POST /api/v1/webhooks/configure
+ * Configure webhook URLs (admin only)
+ */
+router.post('/api/v1/webhooks/configure', requireAdmin, (req, res) => {
+    const { urls } = req.body;
+    if (!Array.isArray(urls)) {
+        return res.status(400).json({ success: false, error: 'urls must be an array' });
+    }
+    
+    // Validate URLs
+    const validUrls = urls.filter(url => {
+        try {
+            new URL(url);
+            return true;
+        } catch {
+            return false;
+        }
+    });
+    
+    webhookUrls = validUrls;
+    
+    res.json({
+        success: true,
+        message: `Configured ${webhookUrls.length} webhook(s)`,
+        urls: webhookUrls
+    });
+});
+
+/**
+ * Send webhook notification
+ */
+async function sendWebhook(event, data) {
+    if (webhookUrls.length === 0) return;
+    
+    const payload = {
+        event,
+        timestamp: new Date().toISOString(),
+        data
+    };
+    
+    for (const url of webhookUrls) {
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                console.error(`Webhook failed for ${url}:`, response.status);
+            }
+        } catch (error) {
+            console.error(`Webhook error for ${url}:`, error.message);
+        }
+    }
+}
 
 /**
  * Generate HTML for admin dashboard
