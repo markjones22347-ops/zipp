@@ -264,7 +264,8 @@ async function handleUpload(e) {
  */
 function showSuccess(result) {
     const fullUrl = window.location.origin + result.url;
-    shareLink.value = fullUrl;
+    const infoUrl = fullUrl + '/info';
+    shareLink.value = infoUrl;
     
     // Build file summary
     const file = result.file;
@@ -300,7 +301,7 @@ function showSuccess(result) {
     successSection.classList.remove('hidden');
     
     // Auto-copy info page URL
-    copyToClipboard(fullUrl + '/info');
+    copyToClipboard(infoUrl);
     copyBtn.classList.add('copied');
     copyBtn.querySelector('.copy-text').textContent = 'Copied!';
 }
