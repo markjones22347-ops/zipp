@@ -1,10 +1,6 @@
 /**
  * Zipp File Hosting - Frontend Application
- * Handles file uploads, UI interactions, and session storage
  */
-
-// Session storage for recent uploads
-const STORAGE_KEY = 'zipp_recent_uploads';
 
 // DOM Elements
 const uploadSection = document.getElementById('uploadSection');
@@ -26,7 +22,6 @@ const copyBtn = document.getElementById('copyBtn');
 const fileSummary = document.getElementById('fileSummary');
 const newUploadBtn = document.getElementById('newUploadBtn');
 
-const recentList = document.getElementById('recentList');
 const toast = document.getElementById('toast');
 const toastIcon = document.getElementById('toastIcon');
 const toastMessage = document.getElementById('toastMessage');
@@ -247,9 +242,6 @@ async function handleUpload(e) {
             throw new Error(result.error || 'Upload failed');
         }
         
-        // Add to recent uploads
-        addToRecentUploads(result.file);
-        
         // Show success section
         showSuccess(result);
         
@@ -301,7 +293,6 @@ function showSuccess(result) {
     // Switch sections
     uploadSection.classList.add('hidden');
     successSection.classList.remove('hidden');
-    document.getElementById('recentSection').style.display = 'block';
     
     // Auto-copy link
     copyToClipboard(fullUrl);
@@ -325,105 +316,6 @@ function resetUpload() {
     // Switch sections
     successSection.classList.add('hidden');
     uploadSection.classList.remove('hidden');
-}
-
-/**
- * Add upload to recent list in session storage
- */
-function addToRecentUploads(file) {
-    const uploads = getRecentUploads();
-    
-    const newUpload = {
-        ...file,
-        fullUrl: window.location.origin + `/d/${file.custom_hash}`
-    };
-    
-    // Add to beginning, limit to 10
-    uploads.unshift(newUpload);
-    if (uploads.length > 10) {
-        uploads.pop();
-    }
-    
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(uploads));
-    renderRecentUploads();
-}
-
-/**
- * Get recent uploads from session storage
- */
-function getRecentUploads() {
-    try {
-        const stored = sessionStorage.getItem(STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch {
-        return [];
-    }
-}
-
-/**
- * Render recent uploads list
- */
-function renderRecentUploads() {
-    const uploads = getRecentUploads();
-    
-    if (uploads.length === 0) {
-        recentList.innerHTML = '<p class="recent-empty">No uploads yet. Upload a file to see it here!</p>';
-        return;
-    }
-    
-    recentList.innerHTML = uploads.map(file => {
-        const isExpired = file.expires_at && new Date(file.expires_at) < new Date();
-        const expiryClass = isExpired ? 'expired' : (file.expires_at ? '' : 'never');
-        const expiryText = formatExpiry(file.expires_at);
-        
-        return `
-            <div class="recent-item">
-                <div class="recent-icon">📦</div>
-                <div class="recent-info">
-                    <div class="recent-name">${escapeHtml(file.display_name)}</div>
-                    <div class="recent-meta">
-                        <span>${file.size_formatted}</span>
-                        <span class="recent-expiry ${expiryClass}">
-                            ${isExpired ? '⏰' : '⏳'} ${expiryText}
-                        </span>
-                        <span>↓ ${file.download_count || 0}</span>
-                    </div>
-                </div>
-                <div class="recent-actions">
-                    <button class="recent-btn" onclick="copyLink('${file.fullUrl}', this)" title="Copy link">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                    </button>
-                    <a href="${file.fullUrl}/info" class="recent-btn" title="View download page">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                            <polyline points="15 3 21 3 21 9"></polyline>
-                            <line x1="10" y1="14" x2="21" y2="3"></line>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-/**
- * Copy link handler for recent items
- */
-function copyLink(url, btn) {
-    copyToClipboard(url).then(() => {
-        // Visual feedback on button
-        const originalHTML = btn.innerHTML;
-        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-        btn.style.color = 'var(--success-color)';
-        
-        setTimeout(() => {
-            btn.innerHTML = originalHTML;
-            btn.style.color = '';
-        }, 2000);
-    });
 }
 
 /**
@@ -472,14 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup drag and drop
     setupDragAndDrop();
     
-    // Render recent uploads
-    renderRecentUploads();
-    
     // Set initial custom expiry min
     const now = new Date();
     now.setMinutes(now.getMinutes() + 1);
     customExpiry.min = now.toISOString().slice(0, 16);
 });
-
-// Expose copyLink for inline handlers
-window.copyLink = copyLink;
