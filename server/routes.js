@@ -726,6 +726,9 @@ function generateDownloadPage(file, providedPassword) {
 // Admin token - hardcoded as requested
 const ADMIN_TOKEN = 'tDhWn1TUA0E4DCgk0RbPQw';
 
+// Developer token - separate from admin, for API key generation
+const DEV_TOKEN = 'zippdev_' + ADMIN_TOKEN;
+
 // Webhook URLs (configure these)
 let webhookUrls = [];
 
@@ -750,6 +753,34 @@ p { color: #737373; font-size: 13px; }
 <p>Access denied. Add ?token= to URL.</p></div></body></html>`);
         }
         return res.status(401).json({ success: false, error: 'Unauthorized - add ?token= to URL' });
+    }
+    next();
+}
+
+/**
+ * Developer authentication middleware
+ */
+function requireDeveloper(req, res, next) {
+    const token = req.query.token || req.headers['x-dev-token'];
+    if (token !== DEV_TOKEN && token !== ADMIN_TOKEN) {
+        // Return HTML for browser access, JSON for API
+        if (req.headers.accept && req.headers.accept.includes('text/html')) {
+            return res.status(401).send(`<!DOCTYPE html>
+<html><head><title>Developer Access</title>
+<style>
+body { background: #0a0a0a; color: #e5e5e5; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
+       display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+.container { background: #141414; border: 1px solid #262626; padding: 48px; text-align: center; max-width: 400px; }
+h1 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; color: #fff; }
+p { color: #737373; font-size: 13px; margin-bottom: 24px; }
+.token { background: #0a0a0a; padding: 12px; font-family: inherit; border: 1px solid #262626; color: #fff; width: 100%; margin-bottom: 16px; }
+button { background: #e5e5e5; color: #0a0a0a; border: none; padding: 12px 24px; font-family: inherit; cursor: pointer; text-transform: uppercase; font-size: 12px; }
+</style></head>
+<body><div class="container"><h1>Developer Access Required</h1>
+<p>Enter the developer token to access the API key generator:</p>
+<form method="get"><input type="text" name="token" class="token" placeholder="Enter token" autofocus><br><button type="submit">Access</button></form></div></body></html>`);
+        }
+        return res.status(401).json({ success: false, error: 'Unauthorized developer access' });
     }
     next();
 }
@@ -1300,6 +1331,14 @@ function generateAdminPage() {
 }
 
 /**
+ * GET /dev
+ * Developer Panel - separate from admin
+ */
+router.get('/dev', requireDeveloper, (req, res) => {
+    res.send(generateDeveloperPage());
+});
+
+/**
  * GET /api/docs
  * API Documentation page for developers
  */
@@ -1308,10 +1347,10 @@ router.get('/docs', (req, res) => {
 });
 
 /**
- * GET /api/admin/keys
- * Get all API keys (admin only)
+ * GET /api/dev/keys
+ * Get all API keys (developer only)
  */
-router.get('/admin/keys', requireAdmin, (req, res) => {
+router.get('/dev/keys', requireDeveloper, (req, res) => {
     try {
         const keys = getAllApiKeys();
         res.json({ success: true, keys });
@@ -1322,10 +1361,10 @@ router.get('/admin/keys', requireAdmin, (req, res) => {
 });
 
 /**
- * POST /api/admin/keys
- * Generate new API key (admin only)
+ * POST /api/dev/keys
+ * Generate new API key (developer only)
  */
-router.post('/admin/keys', requireAdmin, (req, res) => {
+router.post('/dev/keys', requireDeveloper, (req, res) => {
     try {
         const { name } = req.body;
         if (!name || name.trim().length === 0) {
@@ -1345,10 +1384,10 @@ router.post('/admin/keys', requireAdmin, (req, res) => {
 });
 
 /**
- * DELETE /api/admin/keys/:id
- * Revoke an API key (admin only)
+ * DELETE /api/dev/keys/:id
+ * Revoke an API key (developer only)
  */
-router.delete('/admin/keys/:id', requireAdmin, (req, res) => {
+router.delete('/dev/keys/:id', requireDeveloper, (req, res) => {
     try {
         const { id } = req.params;
         revokeApiKey(id);
@@ -1358,6 +1397,283 @@ router.delete('/admin/keys/:id', requireAdmin, (req, res) => {
         res.status(500).json({ success: false, error: 'Failed to revoke API key' });
     }
 });
+
+/**
+ * Generate Developer Panel HTML page
+ */
+function generateDeveloperPage() {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Panel - Zipp</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            color: #e5e5e5;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .subtitle {
+            font-size: 13px;
+            color: #737373;
+            margin-bottom: 32px;
+        }
+        .card {
+            background: #141414;
+            border: 1px solid #262626;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+        h2 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            color: #737373;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        input[type="text"] {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            color: #e5e5e5;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #525252;
+        }
+        button {
+            background: #e5e5e5;
+            color: #0a0a0a;
+            border: none;
+            padding: 12px 24px;
+            font-family: inherit;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #fff;
+        }
+        .key-display {
+            background: #1a1a1a;
+            border: 1px solid #262626;
+            padding: 16px;
+            margin-top: 16px;
+            display: none;
+        }
+        .key-display.show {
+            display: block;
+        }
+        .key-value {
+            background: #0a0a0a;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 13px;
+            color: #fff;
+            word-break: break-all;
+            margin-bottom: 8px;
+        }
+        .warning {
+            color: #f59e0b;
+            font-size: 12px;
+        }
+        .keys-list {
+            margin-top: 16px;
+        }
+        .key-item {
+            background: #1a1a1a;
+            border: 1px solid #262626;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .key-info h3 {
+            font-size: 13px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .key-info p {
+            font-size: 12px;
+            color: #737373;
+        }
+        .delete-btn {
+            background: #dc2626;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            font-family: inherit;
+            font-size: 11px;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background: #ef4444;
+        }
+        .empty {
+            color: #737373;
+            font-size: 13px;
+            text-align: center;
+            padding: 32px;
+        }
+        .links {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #262626;
+        }
+        .links a {
+            color: #737373;
+            text-decoration: none;
+            font-size: 13px;
+            margin-right: 24px;
+        }
+        .links a:hover {
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Developer Panel</h1>
+        <p class="subtitle">Generate API keys for your applications</p>
+        
+        <div class="card">
+            <h2>Generate New API Key</h2>
+            <div class="form-group">
+                <label>Key Name</label>
+                <input type="text" id="keyName" placeholder="My App">
+            </div>
+            <button onclick="generateKey()">Generate Key</button>
+            
+            <div class="key-display" id="keyDisplay">
+                <div class="key-value" id="keyValue"></div>
+                <p class="warning">Save this key now! It won't be shown again.</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Your API Keys</h2>
+            <div class="keys-list" id="keysList">
+                <div class="empty">Loading...</div>
+            </div>
+        </div>
+        
+        <div class="links">
+            <a href="/api/docs">API Documentation</a>
+            <a href="/">Back to Zipp</a>
+        </div>
+    </div>
+
+    <script>
+        const token = new URLSearchParams(window.location.search).get('token');
+        
+        async function generateKey() {
+            const name = document.getElementById('keyName').value.trim();
+            if (!name) {
+                alert('Enter a key name');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/dev/keys?token=' + token, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                
+                document.getElementById('keyValue').textContent = data.key;
+                document.getElementById('keyDisplay').classList.add('show');
+                document.getElementById('keyName').value = '';
+                loadKeys();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+        
+        async function loadKeys() {
+            try {
+                const res = await fetch('/api/dev/keys?token=' + token);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                
+                const list = document.getElementById('keysList');
+                if (data.keys.length === 0) {
+                    list.innerHTML = '<div class="empty">No API keys yet</div>';
+                    return;
+                }
+                
+                list.innerHTML = data.keys.map(key => \`
+                    <div class="key-item">
+                        <div class="key-info">
+                            <h3>\${escapeHtml(key.name)}</h3>
+                            <p>Created: \${new Date(key.created_at).toLocaleDateString()} | 
+                               Last used: \${key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'} | 
+                               Status: \${key.is_active ? 'Active' : 'Revoked'}</p>
+                        </div>
+                        <button class="delete-btn" onclick="revokeKey('\${key.id}')">Revoke</button>
+                    </div>
+                \`).join('');
+            } catch (err) {
+                document.getElementById('keysList').innerHTML = '<div class="empty">Error: ' + err.message + '</div>';
+            }
+        }
+        
+        async function revokeKey(id) {
+            if (!confirm('Revoke this API key?')) return;
+            try {
+                const res = await fetch('/api/dev/keys/' + id + '?token=' + token, { method: 'DELETE' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                loadKeys();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        loadKeys();
+    </script>
+</body>
+</html>`;
+}
 
 /**
  * Generate API Documentation HTML page
