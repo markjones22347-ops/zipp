@@ -5,6 +5,8 @@
 
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 
 const DB_PATH = path.join(__dirname, '..', 'db', 'zipp.db');
 const SCHEMA_PATH = path.join(__dirname, '..', 'db', 'schema.sql');
@@ -280,6 +282,61 @@ function formatFileSize(bytes) {
 }
 
 /**
+ * Generate a new API key
+ */
+function generateApiKey(name) {
+    const db = initDatabase();
+    const key = 'zipp_' + crypto.randomBytes(32).toString('hex');
+    const keyHash = crypto.createHash('sha256').update(key).digest('hex');
+    
+    const stmt = db.prepare(`
+        INSERT INTO api_keys (id, key_hash, name, created_at, is_active)
+        VALUES (?, ?, ?, ?, 1)
+    `);
+    
+    stmt.run(uuidv4(), keyHash, name, new Date().toISOString());
+    return key; // Return the plain key (only shown once)
+}
+
+/**
+ * Verify an API key
+ */
+function verifyApiKey(key) {
+    if (!key) return false;
+    const db = initDatabase();
+    const keyHash = crypto.createHash('sha256').update(key).digest('hex');
+    
+    const stmt = db.prepare('SELECT * FROM api_keys WHERE key_hash = ? AND is_active = 1');
+    const record = stmt.get(keyHash);
+    
+    if (record) {
+        // Update last used
+        const updateStmt = db.prepare('UPDATE api_keys SET last_used_at = ? WHERE id = ?');
+        updateStmt.run(new Date().toISOString(), record.id);
+    }
+    
+    return !!record;
+}
+
+/**
+ * Get all API keys
+ */
+function getAllApiKeys() {
+    const db = initDatabase();
+    const stmt = db.prepare('SELECT id, name, created_at, last_used_at, is_active FROM api_keys ORDER BY created_at DESC');
+    return stmt.all();
+}
+
+/**
+ * Revoke an API key
+ */
+function revokeApiKey(id) {
+    const db = initDatabase();
+    const stmt = db.prepare('UPDATE api_keys SET is_active = 0 WHERE id = ?');
+    stmt.run(id);
+}
+
+/**
  * Format expiry for display
  */
 function formatExpiry(expiresAt) {
@@ -321,5 +378,9 @@ module.exports = {
     formatFileSize,
     formatExpiry,
     hashPassword,
-    verifyPassword
+    verifyPassword,
+    generateApiKey,
+    verifyApiKey,
+    getAllApiKeys,
+    revokeApiKey
 };
