@@ -528,6 +528,98 @@ function generateExpiredPage(file) {
 }
 
 /**
+ * Generate HTML password prompt page
+ */
+function generatePasswordPage(hash, displayName) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Required - Zipp</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            padding: 20px;
+        }
+        .container {
+            background: #141414;
+            border: 1px solid #262626;
+            padding: 48px;
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        p {
+            font-size: 13px;
+            color: #737373;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .file-name {
+            color: #fff;
+            font-weight: 500;
+        }
+        input[type="password"] {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            color: #e5e5e5;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #525252;
+        }
+        button {
+            width: 100%;
+            background: #e5e5e5;
+            color: #0a0a0a;
+            border: none;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Password Required</h1>
+        <p>This file is protected: <span class="file-name">${displayName || 'File'}</span></p>
+        <form method="get" action="/d/${hash}">
+            <input type="password" name="password" placeholder="Enter password" required autofocus>
+            <button type="submit">Access File</button>
+        </form>
+    </div>
+</body>
+</html>`;
+}
+
+/**
  * Generate HTML download page for a file
  */
 function generateDownloadPage(file, providedPassword) {
