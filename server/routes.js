@@ -1103,10 +1103,13 @@ function generateAdminPage() {
         async function refreshFiles() {
             document.getElementById('filesContainer').innerHTML = '<div class="loading">Loading files...</div>';
             try {
+                console.log('Fetching files...');
                 const files = await fetchFiles();
+                console.log('Files loaded:', files.length);
                 renderFiles(files);
                 updateStats(files);
             } catch (err) {
+                console.error('Error loading files:', err);
                 document.getElementById('filesContainer').innerHTML = '<div class="empty">Error: ' + err.message + '</div>';
             }
         }
