@@ -30,7 +30,11 @@ const {
     formatFileSize,
     formatExpiry,
     hashPassword,
-    verifyPassword
+    verifyPassword,
+    generateApiKey,
+    verifyApiKey,
+    getAllApiKeys,
+    revokeApiKey
 } = require('./db');
 
 // Ensure uploads directory exists
@@ -722,11 +726,6 @@ function generateDownloadPage(file, providedPassword) {
 // Admin token - hardcoded as requested
 const ADMIN_TOKEN = 'tDhWn1TUA0E4DCgk0RbPQw';
 
-// API Keys for developers (in production, store hashed in DB)
-const API_KEYS = new Set([
-    'dev_' + ADMIN_TOKEN // Developer API key
-]);
-
 // Webhook URLs (configure these)
 let webhookUrls = [];
 
@@ -832,8 +831,8 @@ router.post('/admin/cleanup', requireAdmin, (req, res) => {
  */
 function requireApiKey(req, res, next) {
     const apiKey = req.headers['x-api-key'];
-    if (!apiKey || !API_KEYS.has(apiKey)) {
-        return res.status(401).json({ success: false, error: 'Invalid API key' });
+    if (!apiKey || !verifyApiKey(apiKey)) {
+        return res.status(401).json({ success: false, error: 'Invalid API key. Generate one at /api/docs' });
     }
     next();
 }
@@ -1296,6 +1295,405 @@ function generateAdminPage() {
         // Load on page load
         refreshFiles();
     </script>
+</body>
+</html>`;
+}
+
+/**
+ * GET /api/docs
+ * API Documentation page for developers
+ */
+router.get('/docs', (req, res) => {
+    res.send(generateApiDocsPage());
+});
+
+/**
+ * GET /api/admin/keys
+ * Get all API keys (admin only)
+ */
+router.get('/admin/keys', requireAdmin, (req, res) => {
+    try {
+        const keys = getAllApiKeys();
+        res.json({ success: true, keys });
+    } catch (error) {
+        console.error('API keys fetch error:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch API keys' });
+    }
+});
+
+/**
+ * POST /api/admin/keys
+ * Generate new API key (admin only)
+ */
+router.post('/admin/keys', requireAdmin, (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name || name.trim().length === 0) {
+            return res.status(400).json({ success: false, error: 'Name is required' });
+        }
+        
+        const key = generateApiKey(name.trim());
+        res.json({ 
+            success: true, 
+            key,
+            message: 'Save this key - it will not be shown again'
+        });
+    } catch (error) {
+        console.error('API key generation error:', error);
+        res.status(500).json({ success: false, error: 'Failed to generate API key' });
+    }
+});
+
+/**
+ * DELETE /api/admin/keys/:id
+ * Revoke an API key (admin only)
+ */
+router.delete('/admin/keys/:id', requireAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        revokeApiKey(id);
+        res.json({ success: true, message: 'API key revoked' });
+    } catch (error) {
+        console.error('API key revoke error:', error);
+        res.status(500).json({ success: false, error: 'Failed to revoke API key' });
+    }
+});
+
+/**
+ * Generate API Documentation HTML page
+ */
+function generateApiDocsPage() {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zipp. for devs - API Documentation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid #262626;
+        }
+        h1 {
+            font-size: 32px;
+            color: #fff;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+        .subtitle {
+            color: #737373;
+            font-size: 14px;
+        }
+        .tagline {
+            color: #525252;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+        h2 {
+            font-size: 18px;
+            color: #fff;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #262626;
+        }
+        h3 {
+            font-size: 14px;
+            color: #fff;
+            margin: 30px 0 15px;
+        }
+        .endpoint {
+            background: #141414;
+            border: 1px solid #262626;
+            border-radius: 8px;
+            padding: 24px;
+            margin: 20px 0;
+        }
+        .method {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 12px;
+            text-transform: uppercase;
+        }
+        .method.post { background: #16a34a; color: #fff; }
+        .method.get { background: #2563eb; color: #fff; }
+        .method.delete { background: #dc2626; color: #fff; }
+        .path {
+            font-size: 16px;
+            color: #fff;
+            font-weight: 500;
+        }
+        .description {
+            color: #a3a3a3;
+            margin: 12px 0;
+            font-size: 14px;
+        }
+        .section {
+            margin: 20px 0;
+        }
+        .section-title {
+            font-size: 12px;
+            color: #737373;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+        }
+        code {
+            background: #0a0a0a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 13px;
+            color: #fff;
+        }
+        pre {
+            background: #0a0a0a;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: inherit;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        pre code {
+            background: transparent;
+            padding: 0;
+        }
+        .param {
+            display: flex;
+            gap: 12px;
+            margin: 8px 0;
+            align-items: baseline;
+        }
+        .param-name {
+            color: #fff;
+            font-weight: 500;
+            min-width: 120px;
+        }
+        .param-type {
+            color: #737373;
+            font-size: 12px;
+        }
+        .param-desc {
+            color: #a3a3a3;
+            font-size: 13px;
+        }
+        .note {
+            background: #1a1a1a;
+            border-left: 3px solid #525252;
+            padding: 16px 20px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: #a3a3a3;
+        }
+        .note strong {
+            color: #fff;
+        }
+        .auth-box {
+            background: #141414;
+            border: 1px solid #262626;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .auth-box h3 {
+            margin-top: 0;
+        }
+        a {
+            color: #fff;
+            text-decoration: underline;
+        }
+        a:hover {
+            color: #e5e5e5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Zipp. for devs</h1>
+            <p class="subtitle">Simple file hosting API</p>
+            <p class="tagline">Build something cool</p>
+        </header>
+
+        <div class="auth-box">
+            <h3>Authentication</h3>
+            <p>All API endpoints require an API key passed in the <code>X-API-Key</code> header.</p>
+            <pre><code>X-API-Key: your_api_key_here</code></pre>
+            <p style="margin-top: 12px; font-size: 13px;">
+                <a href="/api/admin?token=${ADMIN_TOKEN}">Generate API keys in admin panel</a>
+            </p>
+        </div>
+
+        <h2>Endpoints</h2>
+
+        <div class="endpoint">
+            <span class="method post">POST</span>
+            <span class="path">/api/v1/upload</span>
+            <p class="description">Upload a file to Zipp</p>
+            
+            <div class="section">
+                <div class="section-title">Parameters</div>
+                <div class="param">
+                    <span class="param-name">file</span>
+                    <span class="param-type">File (required)</span>
+                    <span class="param-desc">The file to upload</span>
+                </div>
+                <div class="param">
+                    <span class="param-name">display_name</span>
+                    <span class="param-type">String (required)</span>
+                    <span class="param-desc">Name shown on download page</span>
+                </div>
+                <div class="param">
+                    <span class="param-name">description</span>
+                    <span class="param-type">String (optional)</span>
+                    <span class="param-desc">Description of the file</span>
+                </div>
+                <div class="param">
+                    <span class="param-name">expiry_hours</span>
+                    <span class="param-type">Number (optional)</span>
+                    <span class="param-desc">Hours until file expires</span>
+                </div>
+                <div class="param">
+                    <span class="param-name">custom_slug</span>
+                    <span class="param-type">String (optional)</span>
+                    <span class="param-desc">Custom URL (e.g., "my-file")</span>
+                </div>
+                <div class="param">
+                    <span class="param-name">password</span>
+                    <span class="param-type">String (optional)</span>
+                    <span class="param-desc">Password protect the file</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Example Request</div>
+                <pre><code>curl -X POST https://zipp.railway.app/api/v1/upload \\
+  -H "X-API-Key: your_api_key" \\
+  -F "file=@document.pdf" \\
+  -F "display_name=My Document" \\
+  -F "description=Important document" \\
+  -F "expiry_hours=24"</code></pre>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Example Response</div>
+                <pre><code>{
+  "success": true,
+  "file": {
+    "custom_hash": "abc123",
+    "display_name": "My Document",
+    "size_bytes": 1024000,
+    "url": "/d/abc123",
+    "download_url": "/d/abc123?download=1",
+    "password_protected": false
+  }
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <span class="path">/api/v1/files/:hash</span>
+            <p class="description">Get metadata for a file</p>
+            
+            <div class="section">
+                <div class="section-title">Parameters</div>
+                <div class="param">
+                    <span class="param-name">:hash</span>
+                    <span class="param-type">String (required)</span>
+                    <span class="param-desc">The file's unique hash</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Example Response</div>
+                <pre><code>{
+  "success": true,
+  "file": {
+    "custom_hash": "abc123",
+    "display_name": "My Document",
+    "size_bytes": 1024000,
+    "download_count": 5,
+    "is_expired": false,
+    "password_protected": false
+  }
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>Download URLs</h2>
+        
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <span class="path">/d/:hash</span>
+            <p class="description">Download a file directly</p>
+            <div class="section">
+                <div class="section-title">Query Parameters</div>
+                <div class="param">
+                    <span class="param-name">password</span>
+                    <span class="param-type">String (optional)</span>
+                    <span class="param-desc">Password if file is protected</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="endpoint">
+            <span class="method get">GET</span>
+            <span class="path">/d/:hash/info</span>
+            <p class="description">View file info page (HTML)</p>
+        </div>
+
+        <div class="note">
+            <strong>Note:</strong> Download URLs work without authentication. Only the upload and metadata endpoints require an API key.
+        </div>
+
+        <h2>Response Codes</h2>
+        <div class="section">
+            <div class="param">
+                <span class="param-name">200</span>
+                <span class="param-desc">Success</span>
+            </div>
+            <div class="param">
+                <span class="param-name">400</span>
+                <span class="param-desc">Bad request (missing parameters)</span>
+            </div>
+            <div class="param">
+                <span class="param-name">401</span>
+                <span class="param-desc">Invalid or missing API key</span>
+            </div>
+            <div class="param">
+                <span class="param-name">404</span>
+                <span class="param-desc">File not found</span>
+            </div>
+            <div class="param">
+                <span class="param-name">410</span>
+                <span class="param-desc">File expired</span>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 60px; padding-top: 40px; border-top: 1px solid #262626;">
+            <p style="color: #525252; font-size: 12px;">
+                <a href="/">Back to Zipp</a> • 
+                <a href="/api/admin?token=${ADMIN_TOKEN}">Admin Panel</a>
+            </p>
+        </div>
+    </div>
 </body>
 </html>`;
 }
