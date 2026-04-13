@@ -261,9 +261,18 @@ async function handleUpload(e) {
             
             xhr.addEventListener('load', () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve(JSON.parse(xhr.responseText));
+                    try {
+                        resolve(JSON.parse(xhr.responseText));
+                    } catch (e) {
+                        reject(new Error('Invalid response from server'));
+                    }
                 } else {
-                    reject(new Error('Upload failed'));
+                    try {
+                        const error = JSON.parse(xhr.responseText);
+                        reject(new Error(error.error || `Upload failed (${xhr.status})`));
+                    } catch (e) {
+                        reject(new Error(`Upload failed (${xhr.status})`));
+                    }
                 }
             });
             
