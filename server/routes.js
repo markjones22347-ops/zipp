@@ -7,6 +7,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
@@ -20,6 +21,7 @@ const {
     isExpired,
     deleteFileRecord,
     getExpiredFiles,
+    getAllFiles,
     formatFileSize,
     formatExpiry,
     hashPassword,
@@ -309,7 +311,7 @@ router.get('/d/:hash', (req, res) => {
 
 /**
  * GET /d/:hash/info
- * Get download page (HTML) for a file
+ * Get download page (HTML) for a file - password protected
  */
 router.get('/d/:hash/info', (req, res) => {
     const { hash } = req.params;
@@ -323,7 +325,15 @@ router.get('/d/:hash/info', (req, res) => {
         return res.status(410).send(generateExpiredPage(file));
     }
     
-    res.send(generateDownloadPage(file));
+    // Check password FIRST before showing anything
+    const providedPassword = req.query.password;
+    if (file.password_hash) {
+        if (!providedPassword || !verifyPassword(providedPassword, file.password_hash)) {
+            return res.status(401).send(generatePasswordPage(hash, file.display_name));
+        }
+    }
+    
+    res.send(generateDownloadPage(file, providedPassword));
 });
 
 /**
@@ -495,7 +505,7 @@ function generateExpiredPage(file) {
 /**
  * Generate HTML download page for a file
  */
-function generateDownloadPage(file) {
+function generateDownloadPage(file, providedPassword) {
     const sizeFormatted = formatFileSize(file.size_bytes);
     const expiryText = file.expires_at 
         ? `Expires ${new Date(file.expires_at).toLocaleDateString()}`
@@ -870,30 +880,46 @@ router.post('/api/v1/webhooks/configure', requireAdmin, (req, res) => {
 });
 
 /**
- * Send webhook notification
+ * Send webhook notification using https module
  */
-async function sendWebhook(event, data) {
+function sendWebhook(event, data) {
     if (webhookUrls.length === 0) return;
     
-    const payload = {
+    const payload = JSON.stringify({
         event,
         timestamp: new Date().toISOString(),
         data
-    };
+    });
     
-    for (const url of webhookUrls) {
+    for (const urlString of webhookUrls) {
         try {
-            const response = await fetch(url, {
+            const url = new URL(urlString);
+            const options = {
+                hostname: url.hostname,
+                port: url.port || (url.protocol === 'https:' ? 443 : 80),
+                path: url.pathname + url.search,
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(payload)
+                }
+            };
+            
+            const protocol = url.protocol === 'https:' ? https : require('http');
+            const req = protocol.request(options, (res) => {
+                if (res.statusCode < 200 || res.statusCode >= 300) {
+                    console.error(`Webhook failed for ${urlString}:`, res.statusCode);
+                }
             });
             
-            if (!response.ok) {
-                console.error(`Webhook failed for ${url}:`, response.status);
-            }
+            req.on('error', (error) => {
+                console.error(`Webhook error for ${urlString}:`, error.message);
+            });
+            
+            req.write(payload);
+            req.end();
         } catch (error) {
-            console.error(`Webhook error for ${url}:`, error.message);
+            console.error(`Webhook error for ${urlString}:`, error.message);
         }
     }
 }
