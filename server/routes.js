@@ -11,6 +11,11 @@ const https = require('https');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
+// Test route to verify routes are loading
+router.get('/test', (req, res) => {
+    res.json({ success: true, message: 'Routes are working' });
+});
+
 const {
     generateUniqueHash,
     validateSlug,
