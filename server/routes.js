@@ -616,6 +616,9 @@ function generateDownloadPage(file, providedPassword) {
 </html>`;
 }
 
+// Admin token - hardcoded as requested
+const ADMIN_TOKEN = 'tDhWn1TUA0E4DCgk0RbPQw';
+
 // API Keys for developers (in production, store hashed in DB)
 const API_KEYS = new Set([
     'dev_' + ADMIN_TOKEN // Developer API key
@@ -623,9 +626,6 @@ const API_KEYS = new Set([
 
 // Webhook URLs (configure these)
 let webhookUrls = [];
-
-// Admin token - hardcoded as requested
-const ADMIN_TOKEN = 'tDhWn1TUA0E4DCgk0RbPQw';
 
 /**
  * Admin authentication middleware
