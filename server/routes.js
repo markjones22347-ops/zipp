@@ -664,7 +664,7 @@ router.get('/admin', requireAdmin, (req, res) => {
  * GET /api/admin/files
  * Get all files for admin
  */
-router.get('/api/admin/files', requireAdmin, (req, res) => {
+router.get('/admin/files', requireAdmin, (req, res) => {
     try {
         const files = getAllFiles();
         res.json({ success: true, files });
@@ -678,7 +678,7 @@ router.get('/api/admin/files', requireAdmin, (req, res) => {
  * DELETE /api/admin/files/:hash
  * Delete a file as admin
  */
-router.delete('/api/admin/files/:hash', requireAdmin, (req, res) => {
+router.delete('/admin/files/:hash', requireAdmin, (req, res) => {
     try {
         const { hash } = req.params;
         const file = getFileByHash(hash);
@@ -699,7 +699,7 @@ router.delete('/api/admin/files/:hash', requireAdmin, (req, res) => {
  * POST /api/admin/cleanup
  * Bulk delete expired files
  */
-router.post('/api/admin/cleanup', requireAdmin, (req, res) => {
+router.post('/admin/cleanup', requireAdmin, (req, res) => {
     try {
         const expiredFiles = getExpiredFiles();
         let deletedCount = 0;
@@ -739,7 +739,7 @@ function requireApiKey(req, res, next) {
  * POST /api/v1/upload
  * Developer API endpoint for programmatic uploads
  */
-router.post('/api/v1/upload', requireApiKey, upload.single('file'), handleMulterErrors, async (req, res) => {
+router.post('/v1/upload', requireApiKey, upload.single('file'), handleMulterErrors, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -836,7 +836,7 @@ router.post('/api/v1/upload', requireApiKey, upload.single('file'), handleMulter
  * GET /api/v1/files/:hash
  * Developer API - Get file metadata
  */
-router.get('/api/v1/files/:hash', requireApiKey, (req, res) => {
+router.get('/v1/files/:hash', requireApiKey, (req, res) => {
     try {
         const { hash } = req.params;
         const file = getFileByHash(hash);
@@ -873,7 +873,7 @@ router.get('/api/v1/files/:hash', requireApiKey, (req, res) => {
  * POST /api/v1/webhooks/configure
  * Configure webhook URLs (admin only)
  */
-router.post('/api/v1/webhooks/configure', requireAdmin, (req, res) => {
+router.post('/v1/webhooks/configure', requireAdmin, (req, res) => {
     const { urls } = req.body;
     if (!Array.isArray(urls)) {
         return res.status(400).json({ success: false, error: 'urls must be an array' });
@@ -1111,6 +1111,31 @@ function generateAdminPage() {
             }
         }
         
+        async function deleteFile(hash) {
+            if (!confirm('Delete this file?')) return;
+            try {
+                const res = await fetch('/api/admin/files/' + hash + '?token=' + token, { method: 'DELETE' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                refreshFiles();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+        
+        async function cleanupExpired() {
+            if (!confirm('Delete ALL expired files? This cannot be undone.')) return;
+            try {
+                const res = await fetch('/api/admin/cleanup?token=' + token, { method: 'POST' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                alert('Deleted ' + data.deletedCount + ' expired files');
+                refreshFiles();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+        
         function updateStats(files) {
             const total = files.length;
             const totalBytes = files.reduce((sum, f) => sum + f.size_bytes, 0);
@@ -1160,31 +1185,6 @@ function generateAdminPage() {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
-        
-        async function deleteFile(hash) {
-            if (!confirm('Delete this file?')) return;
-            try {
-                const res = await fetch('/api/admin/files/' + hash + '?token=' + token, { method: 'DELETE' });
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error);
-                refreshFiles();
-            } catch (err) {
-                alert('Error: ' + err.message);
-            }
-        }
-        
-        async function cleanupExpired() {
-            if (!confirm('Delete ALL expired files? This cannot be undone.')) return;
-            try {
-                const res = await fetch('/api/admin/cleanup?token=' + token, { method: 'POST' });
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error);
-                alert('Deleted ' + data.deletedCount + ' expired files');
-                refreshFiles();
-            } catch (err) {
-                alert('Error: ' + err.message);
-            }
         }
         
         // Load on page load
