@@ -264,54 +264,74 @@ router.get('/file/:hash', (req, res) => {
  * Download file by hash (HTML page or direct download)
  */
 router.get('/d/:hash', (req, res) => {
-    const { hash } = req.params;
-    const file = getFileByHash(hash);
-    
-    // File not found
-    if (!file) {
-        return res.status(404).send(generateNotFoundPage(hash));
-    }
-    
-    // File expired
-    if (isExpired(file)) {
-        return res.status(410).send(generateExpiredPage(file));
-    }
-    
-    // Check password if required
-    const providedPassword = req.query.password || req.body?.password;
-    if (file.password_hash) {
-        if (!providedPassword || !verifyPassword(providedPassword, file.password_hash)) {
-            return res.status(401).send(generatePasswordPage(hash, file.display_name));
+    try {
+        const { hash } = req.params;
+        console.log('Download request for hash:', hash);
+        
+        const file = getFileByHash(hash);
+        
+        // File not found
+        if (!file) {
+            console.log('File not found in DB:', hash);
+            return res.status(404).send(generateNotFoundPage(hash));
         }
+        
+        console.log('File found:', file.custom_hash, 'Storage path:', file.storage_path);
+        
+        // File expired
+        if (isExpired(file)) {
+            return res.status(410).send(generateExpiredPage(file));
+        }
+        
+        // Check password if required
+        const providedPassword = req.query.password || req.body?.password;
+        if (file.password_hash) {
+            if (!providedPassword || !verifyPassword(providedPassword, file.password_hash)) {
+                return res.status(401).send(generatePasswordPage(hash, file.display_name));
+            }
+        }
+        
+        // Check if storage path exists
+        if (!fs.existsSync(file.storage_path)) {
+            console.error('Storage path does not exist:', file.storage_path);
+            return res.status(404).send(generateNotFoundPage(hash));
+        }
+        
+        // Get the actual file from storage directory
+        const filesInDir = fs.readdirSync(file.storage_path);
+        console.log('Files in storage directory:', filesInDir);
+        
+        const actualFile = filesInDir.find(f => f === file.original_filename);
+        
+        if (!actualFile) {
+            console.error('Original filename not found in directory:', file.original_filename);
+            return res.status(404).send(generateNotFoundPage(hash));
+        }
+        
+        const filePath = path.join(file.storage_path, actualFile);
+        console.log('Serving file from:', filePath);
+        
+        // Increment download count
+        incrementDownloadCount(file.id);
+        
+        // Set appropriate headers - force download as attachment
+        res.setHeader('Content-Type', file.mime_type);
+        res.setHeader('Content-Disposition', `attachment; filename="${file.original_filename}"`);
+        res.setHeader('Content-Length', file.size_bytes);
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        
+        // Stream the file
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.on('error', (err) => {
+            console.error('Error streaming file:', err);
+            res.status(500).send('Error downloading file');
+        });
+        
+        fileStream.pipe(res);
+    } catch (error) {
+        console.error('Download route error:', error);
+        res.status(500).send('Server error during download');
     }
-    
-    // Get the actual file from storage directory
-    const filesInDir = fs.readdirSync(file.storage_path);
-    const actualFile = filesInDir.find(f => f === file.original_filename);
-    
-    if (!actualFile) {
-        return res.status(404).send(generateNotFoundPage(hash));
-    }
-    
-    const filePath = path.join(file.storage_path, actualFile);
-    
-    // Increment download count
-    incrementDownloadCount(file.id);
-    
-    // Set appropriate headers - force download as attachment
-    res.setHeader('Content-Type', file.mime_type);
-    res.setHeader('Content-Disposition', `attachment; filename="${file.original_filename}"`);
-    res.setHeader('Content-Length', file.size_bytes);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    
-    // Stream the file
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.on('error', (err) => {
-        console.error('Error streaming file:', err);
-        res.status(500).send('Error downloading file');
-    });
-    
-    fileStream.pipe(res);
 });
 
 /**
