@@ -60,12 +60,9 @@ const storage = multer.diskStorage({
     }
 });
 
-// Configure multer with file size limit (100MB)
+// Configure multer - no file size limit
 const upload = multer({
-    storage: storage,
-    limits: {
-        fileSize: 100 * 1024 * 1024 // 100MB
-    }
+    storage: storage
 });
 
 /**
@@ -78,12 +75,6 @@ function handleMulterErrors(err, req, res, next) {
             fs.rmSync(req.uploadPath, { recursive: true, force: true });
         }
         
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(413).json({
-                success: false,
-                error: 'File too large. Maximum size is 100MB.'
-            });
-        }
         return res.status(400).json({
             success: false,
             error: 'Upload error: ' + err.message
