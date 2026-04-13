@@ -628,7 +628,21 @@ const ADMIN_TOKEN = 'tDhWn1TUA0E4DCgk0RbPQw';
 function requireAdmin(req, res, next) {
     const token = req.query.token || req.headers['x-admin-token'];
     if (token !== ADMIN_TOKEN) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+        // Return HTML for browser access, JSON for API
+        if (req.headers.accept && req.headers.accept.includes('text/html')) {
+            return res.status(401).send(`<!DOCTYPE html>
+<html><head><title>Unauthorized</title>
+<style>
+body { background: #0a0a0a; color: #e5e5e5; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
+       display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+.container { background: #141414; border: 1px solid #262626; padding: 48px; text-align: center; }
+h1 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+p { color: #737373; font-size: 13px; }
+</style></head>
+<body><div class="container"><h1>401 Unauthorized</h1>
+<p>Access denied. Add ?token= to URL.</p></div></body></html>`);
+        }
+        return res.status(401).json({ success: false, error: 'Unauthorized - add ?token= to URL' });
     }
     next();
 }
