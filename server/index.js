@@ -49,14 +49,21 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
+// Direct API fallback routes (in case routes.js fails to load)
+app.post('/api/upload', (req, res) => {
+    res.json({ success: false, error: 'Upload handler not loaded. Check server logs.' });
+});
+
 // API and download routes
 try {
     const routes = require('./routes');
     app.use('/api', routes);
     app.use('/', routes);
-    console.log('Routes loaded');
+    console.log('Routes loaded successfully');
 } catch (err) {
-    console.error('Routes failed:', err.message);
+    console.error('=== ROUTES FAILED TO LOAD ===');
+    console.error('Error:', err.message);
+    console.error('Stack:', err.stack);
 }
 
 // 404
