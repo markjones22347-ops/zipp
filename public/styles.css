@@ -129,7 +129,7 @@ body {
 .success-section.hidden { display: none; }
 .success-card { background: var(--bg-card); border: 1px solid var(--border); padding: 32px 24px; text-align: center; }
 .success-icon { width: 40px; height: 40px; background: var(--success); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-.success-icon svg { width: 20px; height: 20px; color: white; }
+.success-icon svg { width: 20px; height: 20px; color: #0a0a0a; }
 .success-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
 .success-message { color: var(--text-muted); font-size: 12px; margin-bottom: 20px; }
 .link-box { display: flex; gap: 0; margin-bottom: 16px; }

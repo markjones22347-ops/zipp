@@ -610,9 +610,9 @@ function generatePasswordPage(hash, displayName) {
     <div class="container">
         <h1>Password Required</h1>
         <p>This file is protected: <span class="file-name">${displayName || 'File'}</span></p>
-        <form method="get" action="/d/${hash}">
+        <form method="get" action="/d/${hash}/info">
             <input type="password" name="password" placeholder="Enter password" required autofocus>
-            <button type="submit">Access File</button>
+            <button type="submit">View File Info</button>
         </form>
     </div>
 </body>
