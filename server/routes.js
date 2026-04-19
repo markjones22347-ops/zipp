@@ -1686,11 +1686,11 @@ function generateApiDocsPage() {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zipp. for devs - API Documentation</title>
+    <title>Zipp API - Official Documentation</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: #0a0a0a;
             color: #e5e5e5;
             line-height: 1.6;
@@ -1707,19 +1707,25 @@ function generateApiDocsPage() {
             border-bottom: 1px solid #262626;
         }
         h1 {
-            font-size: 32px;
+            font-size: 42px;
             color: #fff;
             margin-bottom: 8px;
             letter-spacing: -0.02em;
+            font-weight: 700;
         }
         .subtitle {
             color: #737373;
-            font-size: 14px;
+            font-size: 16px;
+            margin-bottom: 12px;
         }
-        .tagline {
-            color: #525252;
-            font-size: 13px;
-            margin-top: 4px;
+        .version {
+            display: inline-block;
+            background: #262626;
+            color: #a3a3a3;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 500;
         }
         h2 {
             font-size: 18px;
@@ -1844,21 +1850,21 @@ function generateApiDocsPage() {
 <body>
     <div class="container">
         <header>
-            <h1>Zipp. for devs</h1>
-            <p class="subtitle">Simple file hosting API</p>
-            <p class="tagline">Build something cool</p>
+            <h1>Zipp API</h1>
+            <p class="subtitle">Official REST API for file hosting</p>
+            <span class="version">v1.0.0</span>
         </header>
 
         <div class="auth-box">
-            <h3>Authentication</h3>
-            <p>All API endpoints require an API key passed in the <code>X-API-Key</code> header.</p>
-            <pre><code>X-API-Key: your_api_key_here</code></pre>
-            <p style="margin-top: 12px; font-size: 13px;">
-                <a href="/api/admin?token=${ADMIN_TOKEN}">Generate API keys in admin panel</a>
+            <h3>🔐 Authentication</h3>
+            <p>All API endpoints require an API key in the <code>X-API-Key</code> header.</p>
+            <code>X-API-Key: your_api_key_here</code>
+            <p style="margin-top: 16px; font-size: 14px; color: #a3a3a3;">
+                Get your API key: <a href="/dev">Developer Panel</a>
             </p>
         </div>
 
-        <h2>Endpoints</h2>
+        <h2>Quick Start</h2>
 
         <div class="endpoint">
             <span class="method post">POST</span>
