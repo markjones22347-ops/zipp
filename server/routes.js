@@ -1563,6 +1563,82 @@ function generateDeveloperPage() {
         .links a:hover {
             color: #fff;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            background: #141414;
+            border: 1px solid #262626;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            border-radius: 8px;
+        }
+        .modal-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+        .modal-body {
+            margin-bottom: 24px;
+        }
+        .modal-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #262626;
+        }
+        .modal-label {
+            color: #737373;
+            font-size: 12px;
+        }
+        .modal-value {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .btn-cancel {
+            background: #262626;
+            color: #e5e5e5;
+        }
+        .btn-cancel:hover {
+            background: #404040;
+        }
+        .btn-confirm {
+            background: #dc2626;
+            color: white;
+        }
+        .btn-confirm:hover {
+            background: #ef4444;
+        }
+        .view-btn {
+            background: #262626;
+            color: #e5e5e5;
+            padding: 6px 12px;
+            margin-right: 8px;
+            font-size: 11px;
+        }
+        .view-btn:hover {
+            background: #404040;
+        }
     </style>
 </head>
 <body>
@@ -1597,8 +1673,35 @@ function generateDeveloperPage() {
         </div>
     </div>
 
+    <!-- Key Info Modal -->
+    <div class="modal" id="keyModal">
+        <div class="modal-content">
+            <h3 class="modal-title">API Key Details</h3>
+            <div class="modal-body" id="keyModalBody"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeKeyModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <h3 class="modal-title">Confirm Revoke</h3>
+            <div class="modal-body">
+                <p>Are you sure you want to revoke this API key? This action cannot be undone.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeConfirmModal()">Cancel</button>
+                <button class="btn-confirm" id="confirmRevokeBtn">Revoke</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const token = new URLSearchParams(window.location.search).get('token');
+        let keysData = [];
+        let keyToRevoke = null;
         
         async function generateKey() {
             const name = document.getElementById('keyName').value.trim();
@@ -1631,6 +1734,8 @@ function generateDeveloperPage() {
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error);
                 
+                keysData = data.keys; // Store for modal access
+                
                 const list = document.getElementById('keysList');
                 if (data.keys.length === 0) {
                     list.innerHTML = '<div class="empty">No API keys yet</div>';
@@ -1645,7 +1750,10 @@ function generateDeveloperPage() {
                                Last used: \${key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'} | 
                                Status: \${key.is_active ? 'Active' : 'Revoked'}</p>
                         </div>
-                        <button class="delete-btn" onclick="revokeKey('\${key.id}')">Revoke</button>
+                        <div>
+                            <button class="view-btn" onclick="showKeyInfo('\${key.id}')">View</button>
+                            <button class="delete-btn" onclick="confirmRevoke('\${key.id}')">Revoke</button>
+                        </div>
                     </div>
                 \`).join('');
             } catch (err) {
@@ -1654,7 +1762,6 @@ function generateDeveloperPage() {
         }
         
         async function revokeKey(id) {
-            if (!confirm('Revoke this API key?')) return;
             try {
                 const res = await fetch('/api/dev/keys/' + id + '?token=' + token, { method: 'DELETE' });
                 const data = await res.json();
@@ -1663,6 +1770,56 @@ function generateDeveloperPage() {
             } catch (err) {
                 alert('Error: ' + err.message);
             }
+        }
+
+        function showKeyInfo(id) {
+            const key = keysData.find(k => k.id === id);
+            if (!key) return;
+
+            const modalBody = document.getElementById('keyModalBody');
+            modalBody.innerHTML = \`
+                <div class="modal-row">
+                    <span class="modal-label">Name</span>
+                    <span class="modal-value">\${escapeHtml(key.name)}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">API Key</span>
+                    <span class="modal-value" style="font-family: monospace; font-size: 11px;">\${escapeHtml(key.api_key)}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">Created</span>
+                    <span class="modal-value">\${new Date(key.created_at).toLocaleString()}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">Last Used</span>
+                    <span class="modal-value">\${key.last_used_at ? new Date(key.last_used_at).toLocaleString() : 'Never'}</span>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">Status</span>
+                    <span class="modal-value">\${key.is_active ? 'Active' : 'Revoked'}</span>
+                </div>
+            \`;
+
+            document.getElementById('keyModal').classList.add('show');
+        }
+
+        function closeKeyModal() {
+            document.getElementById('keyModal').classList.remove('show');
+        }
+
+        function confirmRevoke(id) {
+            keyToRevoke = id;
+            document.getElementById('confirmModal').classList.add('show');
+            
+            document.getElementById('confirmRevokeBtn').onclick = function() {
+                revokeKey(keyToRevoke);
+                closeConfirmModal();
+            };
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('show');
+            keyToRevoke = null;
         }
         
         function escapeHtml(text) {
