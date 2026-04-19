@@ -1829,6 +1829,19 @@ function generateApiDocsPage() {
         .note strong {
             color: #fff;
         }
+        .response-example {
+            background: #0f2a1d;
+            border: 1px solid #166534;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        .response-example pre {
+            background: transparent;
+            border: none;
+            padding: 0;
+            margin: 0;
+        }
         .auth-box {
             background: #141414;
             border: 1px solid #262626;
@@ -1906,7 +1919,7 @@ function generateApiDocsPage() {
             </div>
 
             <div class="section">
-                <div class="section-title">Example Request</div>
+                <div class="section-title">cURL Example</div>
                 <pre><code>curl -X POST https://zipp.railway.app/api/v1/upload \\
   -H "X-API-Key: your_api_key" \\
   -F "file=@document.pdf" \\
@@ -1916,18 +1929,63 @@ function generateApiDocsPage() {
             </div>
 
             <div class="section">
-                <div class="section-title">Example Response</div>
-                <pre><code>{
+                <div class="section-title">JavaScript Example</div>
+                <pre><code>const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+formData.append('display_name', 'My Document');
+
+const response = await fetch('https://zipp.railway.app/api/v1/upload', {
+    method: 'POST',
+    headers: {
+        'X-API-Key': 'your_api_key'
+    },
+    body: formData
+});
+
+const data = await response.json();
+console.log(data.file.url); // Download URL</code></pre>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Python Example</div>
+                <pre><code>import requests
+
+files = {'file': open('document.pdf', 'rb')}
+data = {
+    'display_name': 'My Document',
+    'description': 'Important document',
+    'expiry_hours': 24
+}
+
+response = requests.post(
+    'https://zipp.railway.app/api/v1/upload',
+    headers={'X-API-Key': 'your_api_key'},
+    files=files,
+    data=data
+)
+
+result = response.json()
+print(result['file']['url'])  # Download URL</code></pre>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Response</div>
+                <div class="response-example">
+                    <pre><code>{
   "success": true,
   "file": {
-    "custom_hash": "abc123",
+    "custom_hash": "abc123xyz",
     "display_name": "My Document",
+    "original_filename": "document.pdf",
     "size_bytes": 1024000,
-    "url": "/d/abc123",
-    "download_url": "/d/abc123?download=1",
-    "password_protected": false
+    "url": "/d/abc123xyz",
+    "download_url": "/d/abc123xyz?download=1",
+    "info_url": "/d/abc123xyz/info",
+    "password_protected": false,
+    "expires_at": "2026-04-14T00:00:00.000Z"
   }
 }</code></pre>
+                </div>
             </div>
         </div>
 
@@ -2012,9 +2070,9 @@ function generateApiDocsPage() {
         </div>
 
         <div style="text-align: center; margin-top: 60px; padding-top: 40px; border-top: 1px solid #262626;">
-            <p style="color: #525252; font-size: 12px;">
+            <p style="color: #525252; font-size: 14px;">
                 <a href="/">Back to Zipp</a> • 
-                <a href="/api/admin?token=${ADMIN_TOKEN}">Admin Panel</a>
+                <a href="/dev">Developer Panel</a>
             </p>
         </div>
     </div>
