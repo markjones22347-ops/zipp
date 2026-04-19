@@ -711,7 +711,7 @@ function generateDownloadPage(file, providedPassword) {
         <div class="file-name">${file.display_name}</div>
         <div class="file-meta">${file.original_filename} · ${sizeFormatted}</div>
         ${file.description ? `<div class="file-description">${file.description}</div>` : ''}
-        <a href="/d/${file.custom_hash}?download=1" class="download-btn">Download</a>
+        <a href="/d/${file.custom_hash}?download=1${providedPassword ? '&password=' + encodeURIComponent(providedPassword) : ''}" class="download-btn">Download</a>
         <div class="file-stats">
             ↓ ${file.download_count} · ${expiryText}
         </div>
@@ -799,11 +799,13 @@ router.get('/admin', requireAdmin, (req, res) => {
  */
 router.get('/admin/files', requireAdmin, (req, res) => {
     try {
+        console.log('Fetching all files for admin...');
         const files = getAllFiles();
+        console.log('Files fetched:', files.length);
         res.json({ success: true, files });
     } catch (error) {
         console.error('Admin files error:', error);
-        res.status(500).json({ success: false, error: 'Failed to fetch files' });
+        res.status(500).json({ success: false, error: 'Failed to fetch files: ' + error.message });
     }
 });
 
