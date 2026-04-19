@@ -29,12 +29,14 @@ const {
     getAllFiles,
     formatFileSize,
     formatExpiry,
-    hashPassword,
-    verifyPassword,
     generateApiKey,
     verifyApiKey,
     getAllApiKeys,
-    revokeApiKey
+    revokeApiKey,
+    registerUser,
+    loginUser,
+    getUserByEmail,
+    getUserById
 } = require('./db');
 
 // Ensure uploads directory exists
@@ -1333,10 +1335,72 @@ function generateAdminPage() {
 }
 
 /**
- * GET /dev
- * Developer Panel - separate from admin
+ * GET /dev/login
+ * Developer login page
  */
-router.get('/dev', requireDeveloper, (req, res) => {
+router.get('/dev/login', (req, res) => {
+    res.send(generateDevLoginPage());
+});
+
+/**
+ * POST /api/dev/auth/register
+ * Register a new developer account
+ */
+router.post('/dev/auth/register', (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: 'Email and password required' });
+        }
+        
+        const user = registerUser(email, password);
+        req.session.userId = user.id;
+        req.session.userEmail = user.email;
+        res.json({ success: true, user: { id: user.id, email: user.email } });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/dev/auth/login
+ * Login a developer
+ */
+router.post('/dev/auth/login', (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: 'Email and password required' });
+        }
+        
+        const user = loginUser(email, password);
+        req.session.userId = user.id;
+        req.session.userEmail = user.email;
+        res.json({ success: true, user: { id: user.id, email: user.email } });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(401).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/dev/auth/logout
+ * Logout a developer
+ */
+router.post('/dev/auth/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ success: true });
+});
+
+/**
+ * GET /dev
+ * Developer Panel - requires session auth
+ */
+router.get('/dev', (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/dev/login');
+    }
     res.send(generateDeveloperPage());
 });
 
@@ -1350,11 +1414,14 @@ router.get('/docs', (req, res) => {
 
 /**
  * GET /api/dev/keys
- * Get all API keys (developer only)
+ * Get all API keys for logged-in user
  */
-router.get('/dev/keys', requireDeveloper, (req, res) => {
+router.get('/dev/keys', (req, res) => {
     try {
-        const keys = getAllApiKeys();
+        if (!req.session.userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+        const keys = getAllApiKeys(req.session.userId);
         res.json({ success: true, keys });
     } catch (error) {
         console.error('API keys fetch error:', error);
@@ -1364,16 +1431,19 @@ router.get('/dev/keys', requireDeveloper, (req, res) => {
 
 /**
  * POST /api/dev/keys
- * Generate new API key (developer only)
+ * Generate new API key for logged-in user
  */
-router.post('/dev/keys', requireDeveloper, (req, res) => {
+router.post('/dev/keys', (req, res) => {
     try {
+        if (!req.session.userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
         const { name } = req.body;
         if (!name || name.trim().length === 0) {
             return res.status(400).json({ success: false, error: 'Name is required' });
         }
         
-        const key = generateApiKey(name.trim());
+        const key = generateApiKey(name.trim(), req.session.userId);
         res.json({ 
             success: true, 
             key,
@@ -1387,10 +1457,13 @@ router.post('/dev/keys', requireDeveloper, (req, res) => {
 
 /**
  * DELETE /api/dev/keys/:id
- * Revoke an API key (developer only)
+ * Revoke an API key for logged-in user
  */
-router.delete('/dev/keys/:id', requireDeveloper, (req, res) => {
+router.delete('/dev/keys/:id', (req, res) => {
     try {
+        if (!req.session.userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
         const { id } = req.params;
         revokeApiKey(id);
         res.json({ success: true, message: 'API key revoked' });
@@ -1399,6 +1472,259 @@ router.delete('/dev/keys/:id', requireDeveloper, (req, res) => {
         res.status(500).json({ success: false, error: 'Failed to revoke API key' });
     }
 });
+
+/**
+ * Generate Developer Login/Register Page
+ */
+function generateDevLoginPage() {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Login - Zipp</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            color: #e5e5e5;
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .subtitle {
+            font-size: 13px;
+            color: #737373;
+            margin-bottom: 32px;
+        }
+        .card {
+            background: #141414;
+            border: 1px solid #262626;
+            padding: 32px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #262626;
+        }
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #737373;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            color: #fff;
+            border-bottom-color: #fff;
+        }
+        .form-group {
+            margin-bottom: 16px;
+            display: none;
+        }
+        .form-group.active {
+            display: block;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            color: #737373;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            color: #e5e5e5;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #525252;
+        }
+        button {
+            width: 100%;
+            background: #e5e5e5;
+            color: #0a0a0a;
+            border: none;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #fff;
+        }
+        .error {
+            color: #dc2626;
+            font-size: 12px;
+            margin-top: 12px;
+            display: none;
+        }
+        .links {
+            margin-top: 24px;
+            text-align: center;
+        }
+        .links a {
+            color: #737373;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .links a:hover {
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Developer Portal</h1>
+        <p class="subtitle">Manage your API keys</p>
+        
+        <div class="card">
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('login')">Login</div>
+                <div class="tab" onclick="showTab('register')">Register</div>
+            </div>
+            
+            <div id="loginForm" class="form-group active">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••">
+                </div>
+                <button onclick="login()">Login</button>
+                <div class="error" id="loginError"></div>
+            </div>
+            
+            <div id="registerForm" class="form-group">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="registerEmail" placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="registerPassword" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" id="registerConfirm" placeholder="••••••••">
+                </div>
+                <button onclick="register()">Create Account</button>
+                <div class="error" id="registerError"></div>
+            </div>
+        </div>
+        
+        <div class="links">
+            <a href="/">Back to Zipp</a>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.form-group').forEach(f => f.classList.remove('active'));
+            
+            if (tab === 'login') {
+                document.querySelector('.tab:first-child').classList.add('active');
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.querySelector('.tab:last-child').classList.add('active');
+                document.getElementById('registerForm').classList.add('active');
+            }
+        }
+        
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/dev/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                
+                if (!data.success) throw new Error(data.error);
+                window.location.href = '/dev';
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        async function register() {
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirm = document.getElementById('registerConfirm').value;
+            const errorDiv = document.getElementById('registerError');
+            
+            if (!email || !password || !confirm) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            if (password !== confirm) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/dev/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                
+                if (!data.success) throw new Error(data.error);
+                window.location.href = '/dev';
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>`;
+}
 
 /**
  * Generate Developer Panel HTML page
@@ -1669,6 +1995,7 @@ function generateDeveloperPage() {
         
         <div class="links">
             <a href="/api/docs">API Documentation</a>
+            <a href="/api/dev/auth/logout">Logout</a>
             <a href="/">Back to Zipp</a>
         </div>
     </div>
@@ -1699,7 +2026,6 @@ function generateDeveloperPage() {
     </div>
 
     <script>
-        const token = new URLSearchParams(window.location.search).get('token');
         let keysData = [];
         let keyToRevoke = null;
         
@@ -1711,7 +2037,7 @@ function generateDeveloperPage() {
             }
             
             try {
-                const res = await fetch('/api/dev/keys?token=' + token, {
+                const res = await fetch('/api/dev/keys', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name })
@@ -1730,7 +2056,7 @@ function generateDeveloperPage() {
         
         async function loadKeys() {
             try {
-                const res = await fetch('/api/dev/keys?token=' + token);
+                const res = await fetch('/api/dev/keys');
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error);
                 
@@ -1763,7 +2089,7 @@ function generateDeveloperPage() {
         
         async function revokeKey(id) {
             try {
-                const res = await fetch('/api/dev/keys/' + id + '?token=' + token, { method: 'DELETE' });
+                const res = await fetch('/api/dev/keys/' + id, { method: 'DELETE' });
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error);
                 loadKeys();

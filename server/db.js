@@ -284,17 +284,17 @@ function formatFileSize(bytes) {
 /**
  * Generate a new API key
  */
-function generateApiKey(name) {
+function generateApiKey(name, userId) {
     const db = initDatabase();
     const key = 'zipp_' + crypto.randomBytes(32).toString('hex');
     const keyHash = crypto.createHash('sha256').update(key).digest('hex');
     
     const stmt = db.prepare(`
-        INSERT INTO api_keys (id, key_hash, name, created_at, is_active)
-        VALUES (?, ?, ?, ?, 1)
+        INSERT INTO api_keys (id, key_hash, name, user_id, created_at, is_active)
+        VALUES (?, ?, ?, ?, ?, 1)
     `);
     
-    stmt.run(uuidv4(), keyHash, name, new Date().toISOString());
+    stmt.run(uuidv4(), keyHash, name, userId, new Date().toISOString());
     return key; // Return the plain key (only shown once)
 }
 
@@ -319,12 +319,14 @@ function verifyApiKey(key) {
 }
 
 /**
- * Get all API keys
+ * Get all API keys for a user
  */
-function getAllApiKeys() {
+function getAllApiKeys(userId) {
     const db = initDatabase();
-    const stmt = db.prepare('SELECT id, name, created_at, last_used_at, is_active FROM api_keys ORDER BY created_at DESC');
-    return stmt.all();
+    const stmt = db.prepare('SELECT id, name, created_at, last_used_at, is_active, key_hash FROM api_keys WHERE user_id = ? ORDER BY created_at DESC');
+    const keys = stmt.all(userId);
+    // Add a placeholder api_key field (can't retrieve plain key after creation)
+    return keys.map(k => ({ ...k, api_key: 'zipp_•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••' }));
 }
 
 /**
@@ -363,6 +365,81 @@ function formatExpiry(expiresAt) {
     }
 }
 
+/**
+ * User Authentication Functions
+ */
+
+/**
+ * Register a new developer account
+ */
+function registerUser(email, password) {
+    const db = initDatabase();
+    const id = uuidv4();
+    const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
+    const createdAt = new Date().toISOString();
+    
+    try {
+        const stmt = db.prepare(`
+            INSERT INTO users (id, email, password_hash, created_at)
+            VALUES (?, ?, ?, ?)
+        `);
+        stmt.run(id, email, passwordHash, createdAt);
+        return { id, email, created_at: createdAt };
+    } catch (error) {
+        if (error.message.includes('UNIQUE constraint')) {
+            throw new Error('Email already registered');
+        }
+        throw error;
+    }
+}
+
+/**
+ * Login a user by email and password
+ */
+function loginUser(email, password) {
+    const db = initDatabase();
+    const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
+    
+    const stmt = db.prepare(`
+        SELECT id, email, password_hash, created_at
+        FROM users
+        WHERE email = ? AND password_hash = ?
+    `);
+    const user = stmt.get(email, passwordHash);
+    
+    if (!user) {
+        throw new Error('Invalid email or password');
+    }
+    
+    return { id: user.id, email: user.email, created_at: user.created_at };
+}
+
+/**
+ * Get user by email
+ */
+function getUserByEmail(email) {
+    const db = initDatabase();
+    const stmt = db.prepare(`
+        SELECT id, email, created_at
+        FROM users
+        WHERE email = ?
+    `);
+    return stmt.get(email);
+}
+
+/**
+ * Get user by ID
+ */
+function getUserById(id) {
+    const db = initDatabase();
+    const stmt = db.prepare(`
+        SELECT id, email, created_at
+        FROM users
+        WHERE id = ?
+    `);
+    return stmt.get(id);
+}
+
 module.exports = {
     initDatabase,
     generateUniqueHash,
@@ -382,5 +459,9 @@ module.exports = {
     generateApiKey,
     verifyApiKey,
     getAllApiKeys,
-    revokeApiKey
+    revokeApiKey,
+    registerUser,
+    loginUser,
+    getUserByEmail,
+    getUserById
 };

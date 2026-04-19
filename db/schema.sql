@@ -27,10 +27,24 @@ CREATE TABLE IF NOT EXISTS api_keys (
     id TEXT PRIMARY KEY,
     key_hash TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
+    user_id TEXT NOT NULL,
     created_at TEXT NOT NULL,
     last_used_at TEXT NULL,
-    is_active INTEGER NOT NULL DEFAULT 1
+    is_active INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 -- Index for API key lookups
 CREATE INDEX IF NOT EXISTS idx_api_key_hash ON api_keys(key_hash);
+CREATE INDEX IF NOT EXISTS idx_api_key_user ON api_keys(user_id);
+
+-- Users table for developer accounts
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+-- Index for email lookups
+CREATE INDEX IF NOT EXISTS idx_user_email ON users(email);
